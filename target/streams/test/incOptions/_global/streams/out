@@ -1,0 +1,20 @@
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = /Users/edgarmandefield/Nextcloud/HTWG/3. Semester/software_engineering/damen/test2/target/scala-3.3.7/test-classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = /Users/edgarmandefield/Nextcloud/HTWG/3. Semester/software_engineering/damen/test2/target/scala-3.3.7/test-classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mRegistering generated classes:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CheckersAppTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GameControllerTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	PieceTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ConsoleViewTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GameLogicTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BoardTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CheckersAppTest.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GameControllerTest.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	PieceTest.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ConsoleViewTest.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	GameLogicTest.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0m	BoardTest.tasty[0m
+[0m[[0m[0mdebug[0m] [0m[0mRemoving the temporary directory used for backing up class files: /Users/edgarmandefield/Nextcloud/HTWG/3. Semester/software_engineering/damen/test2/target/scala-3.3.7/test-classes.bak[0m

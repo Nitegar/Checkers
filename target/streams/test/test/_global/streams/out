@@ -1,0 +1,53 @@
+[0m[[0m[0mdebug[0m] [0m[0mRunning TaskDef(de.htwg.CheckersAppTest, org.scalatest.tools.Framework$$anon$1@19a71c1c, false, [SuiteSelector])[0m
+[0m[[0m[0mdebug[0m] [0m[0mRunning TaskDef(de.htwg.model.BoardTest, org.scalatest.tools.Framework$$anon$1@19a71c1c, false, [SuiteSelector])[0m
+[0m[[0m[0mdebug[0m] [0m[0mRunning TaskDef(de.htwg.model.PieceTest, org.scalatest.tools.Framework$$anon$1@19a71c1c, false, [SuiteSelector])[0m
+[0m[[0m[0mdebug[0m] [0m[0mRunning TaskDef(de.htwg.model.GameLogicTest, org.scalatest.tools.Framework$$anon$1@19a71c1c, false, [SuiteSelector])[0m
+[0m[[0m[0mdebug[0m] [0m[0mRunning TaskDef(de.htwg.controller.GameControllerTest, org.scalatest.tools.Framework$$anon$1@19a71c1c, false, [SuiteSelector])[0m
+[0m[[0m[0mdebug[0m] [0m[0mRunning TaskDef(de.htwg.view.ConsoleViewTest, org.scalatest.tools.Framework$$anon$1@19a71c1c, false, [SuiteSelector])[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mPieceTest:[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- Regular and King pieces store correct color state[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- Empty is a singleton and equals only itself[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mBoardTest:[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- create() generates a standard 8x8 board[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- create() places black pieces on top 3 rows and red on bottom 3[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- isValidPosition correctly identifies valid and invalid coordinates[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mGameLogicTest:[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- countPieces counts red and black correctly[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- hasJumpsAvailable returns false if no jumps on initial board[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- getValidMoves returns empty for Empty square[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m- getValidMoves returns valid moves for a Regular piece *** FAILED ***[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m  List() was empty (GameLogicTest.scala:32)[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m- getValidMoves returns valid moves for a King piece *** FAILED ***[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m  List() was empty (GameLogicTest.scala:42)[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- getJumps detects a possible jump[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m- makeMove moves piece and removes jumped piece *** FAILED ***[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m  King(true) was not instance of de.htwg.model.Regular (GameLogicTest.scala:62)[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- makeMove promotes Regular to King when reaching last row[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mCheckersAppTest:[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mCheckersApp[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- should block indefinitely on user input[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mConsoleViewTest:[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- clearScreen prints ANSI clear codes[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- showTurnAnnouncement prints correct text for red and black turns[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- printBoard prints all 8 rows and 8 columns[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32mGameControllerTest:[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- startGame prints welcome message and board[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- gameLoop ends immediately if red has 0 pieces[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- gameLoop ends immediately if black has 0 pieces[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- gameLoop quits on 'quit' or 'q'[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- gameLoop rejects invalid move input[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[32m- gameLoop rejects out-of-bounds positions[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[36mRun completed in 5 seconds, 562 milliseconds.[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[36mTotal number of tests run: 23[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[36mSuites: completed 6, aborted 0[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[36mTests: succeeded 20, failed 3, canceled 0, ignored 0, pending 0[0m[0m
+[0m[[0m[0minfo[0m] [0m[0m[31m*** 3 TESTS FAILED ***[0m[0m
+[0m[[0m[0mdebug[0m] [0m[0mPassed tests:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	de.htwg.CheckersAppTest[0m
+[0m[[0m[0mdebug[0m] [0m[0m	de.htwg.view.ConsoleViewTest[0m
+[0m[[0m[0mdebug[0m] [0m[0m	de.htwg.controller.GameControllerTest[0m
+[0m[[0m[0mdebug[0m] [0m[0m	de.htwg.model.BoardTest[0m
+[0m[[0m[0mdebug[0m] [0m[0m	de.htwg.model.PieceTest[0m
+[0m[[0m[31merror[0m] [0m[0mFailed tests:[0m
+[0m[[0m[31merror[0m] [0m[0m	de.htwg.model.GameLogicTest[0m
+[0m[[0m[31merror[0m] [0m[0m(Test / [31mtest[0m) sbt.TestsFailedException: Tests unsuccessful[0m

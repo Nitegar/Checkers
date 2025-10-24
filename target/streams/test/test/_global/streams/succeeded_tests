@@ -1,0 +1,7 @@
+#Successful Tests
+#Fri Oct 24 12:48:06 CEST 2025
+de.htwg.CheckersAppTest=1761302882720
+de.htwg.controller.GameControllerTest=1761302886960
+de.htwg.model.BoardTest=1761302881682
+de.htwg.model.PieceTest=1761302881671
+de.htwg.view.ConsoleViewTest=1761302882728
