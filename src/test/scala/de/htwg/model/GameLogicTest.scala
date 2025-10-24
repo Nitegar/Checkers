@@ -26,7 +26,7 @@ class GameLogicTest extends AnyFunSuite {
 
   test("getValidMoves returns valid moves for a Regular piece") {
     val board = Board.create()
-    val moves = GameLogic.getValidMoves(board, 3, 1)
+    val moves = GameLogic.getValidMoves(board, 5, 0)
     assert(moves.nonEmpty)
     assert(moves.forall { case (r, c, _) => Board.isValidPosition(r, c) })
   }
@@ -34,8 +34,8 @@ class GameLogicTest extends AnyFunSuite {
   test("getValidMoves returns valid moves for a King piece") {
     val board = Board.create()
     val kingBoard = board.map(_.clone())
-    kingBoard(0)(1) = King(true)
-    val moves = GameLogic.getValidMoves(kingBoard, 0, 1)
+    kingBoard(3)(3) = King(true)
+    val moves = GameLogic.getValidMoves(kingBoard, 3, 3)
     assert(moves.nonEmpty)
     assert(moves.forall { case (r, c, _) => Board.isValidPosition(r, c) })
   }
@@ -51,13 +51,12 @@ class GameLogicTest extends AnyFunSuite {
 
   test("makeMove moves piece and removes jumped piece") {
     val board = Board.create().map(_.clone())
-    board(2)(2) = Regular(true)
-    board(1)(1) = Regular(false)
-    board(0)(0) = Empty
-    val newBoard = GameLogic.makeMove(board, 2, 2, 0, 0)
-    assert(newBoard(0)(0).isInstanceOf[Regular])
-    assert(newBoard(1)(1) == Empty) // jumped piece removed
-    assert(newBoard(2)(2) == Empty)
+    val firstTurnBoard = GameLogic.makeMove(board, 5, 0, 4, 1)
+    val secondTurnBoard = GameLogic.makeMove(firstTurnBoard, 2, 3, 3, 2)
+    val thirdTurnBoard = GameLogic.makeMove(secondTurnBoard, 4,1, 2, 3)
+
+    assert(thirdTurnBoard(3)(2) == Empty)
+    assert(thirdTurnBoard(2)(3) == Regular(true))
   }
 
   test("makeMove promotes Regular to King when reaching last row") {
