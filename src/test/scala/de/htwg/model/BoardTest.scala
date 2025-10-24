@@ -4,7 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 
 class BoardTest extends AnyFunSuite {
 
-  test("create() generates a standard 8x8 board i am Rasool the cool") {
+  test("create() generates a standard 8x8 board for eddy the best") {
     val board = Board.create()
     assert(board.length == 8)
     assert(board.forall(_.length == 8))
