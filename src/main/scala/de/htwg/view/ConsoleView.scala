@@ -8,8 +8,6 @@ object ConsoleView {
 
   def clearScreen(): Unit = print("\u001b[2J\u001b[H")
 
-  def playBackgroundMusic(): Unit = println("♪♫ Background Music Playing ♫♪")
-
   def showTurnAnnouncement(isRedTurn: Boolean): Unit = {
     clearScreen()
     if (isRedTurn) RedTurn.show()
@@ -36,7 +34,6 @@ object ConsoleView {
     val black = "\u001b[90m"
 
     val displayBoard = if (isRedTurn) board else board.reverse.map(_.reverse)
-    playBackgroundMusic()
     println("\n  " + (0 until 8).map(i => s" $i ").mkString)
     println("  " + "+--" * 8 + "+")
 
