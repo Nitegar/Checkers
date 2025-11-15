@@ -52,6 +52,7 @@ object ConsoleView {
       println(s" $row")
       println("  " + "+--" * 8 + "+")
     }
+    println("  " + (0 until 8).map(i => s" $i ").mkString) //NEW unten auch nummeriert
 
     println("\nPieces: " +
       s"${red}○${reset}/${red}◎${reset} = Red, " +

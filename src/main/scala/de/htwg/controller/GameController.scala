@@ -49,19 +49,46 @@ object GameController {
           gameLoop(board, isRedTurn, false)
         } else {
           val Array(fromRow, fromCol, toRow, toCol) = coords
-          if (!isValidPosition(fromRow, fromCol) || !isValidPosition(toRow, toCol)) {
+          
+          // --- FIX 1: Koordinaten umdrehen, falls Schwarz dran ist ---
+          val (fromR, fromC, toR, toC) =
+            if (isRedTurn) (fromRow, fromCol, toRow, toCol)
+            else (7 - fromRow, 7 - fromCol, 7 - toRow, 7 - toCol)
+
+          if (!isValidPosition(fromR, fromC) || !isValidPosition(toR, toC)) {
             println("❌ Invalid position. Use 0-7.")
             Thread.sleep(800)
             gameLoop(board, isRedTurn, false)
           } else {
-            val piece = board(fromRow)(fromCol)
-            val moves = getValidMoves(board, fromRow, fromCol)
+
+            // --- FIX 2: Prüfen, ob der Spieler auf eigenes Piece klickt ---
+            (board(fromR)(fromC)) match {
+              case Regular(red) if red != isRedTurn =>
+                println("❌ That piece does not belong to you!")
+                Thread.sleep(800)
+                return gameLoop(board, isRedTurn, false)
+
+              case King(red) if red != isRedTurn =>
+                println("❌ That piece does not belong to you!")
+                Thread.sleep(800)
+                return gameLoop(board, isRedTurn, false)
+
+              case Empty =>
+                println("❌ No piece at that position.")
+                Thread.sleep(800)
+                return gameLoop(board, isRedTurn, false)
+
+              case _ => // alles ok
+            }
+
+            val piece = board(fromR)(fromC)
+            val moves = getValidMoves(board, fromR, fromC)
             val hasJumps = hasJumpsAvailable(board, isRedTurn)
-            val move = moves.find { case (r, c, _) => r == toRow && c == toCol }
+            val move = moves.find { case (r, c, _) => r == toR && c == toC }
       
             move match {
               case Some((r, c, isJump)) if !hasJumps || isJump =>
-                val newBoard = makeMove(board, fromRow, fromCol, toRow, toCol)
+                val newBoard = makeMove(board, fromR, fromC, toR, toC)
                 if (isJump) showKillEffect(1)
                 gameLoop(newBoard, !isRedTurn, true)
               case Some(_) =>
