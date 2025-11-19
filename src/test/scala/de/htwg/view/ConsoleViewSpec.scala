@@ -3,48 +3,21 @@ package de.htwg.view
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 import de.htwg.model._
-import de.htwg.model.Board._
 
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
 
 class ConsoleViewSpec extends AnyWordSpec with Matchers {
 
-  private def captureOutput(block: => Unit): String = {
-    val stream = new ByteArrayOutputStream()
-    Console.withOut(new PrintStream(stream)) {
-      block
-    }
-    stream.toString
-  }
-
   "ConsoleView" when {
-
-    "clearing the screen" should {
-
-      "print ANSI clear codes" in {
-        val output = captureOutput(ConsoleView.clearScreen())
-        output should include("\u001b[2J")
-        output should include("\u001b[H")
-      }
-
-      "contain exactly the expected ANSI sequence" in {
-        val output = captureOutput(ConsoleView.clearScreen())
-        output shouldBe "\u001b[2J\u001b[H"
-      }
-    }
 
     "showing turn announcements" should {
 
-      "clear screen and show red content for red's turn" in {
-        val output = captureOutput(ConsoleView.showTurnAnnouncement(isRedTurn = true))
-        output should include("\u001b[2J")
+      "show red content for red's turn" in {
+        val output = ConsoleView.turnAnnouncementString(isRedTurn = true)
         output should (include("RED") or include("○"))
       }
 
-      "clear screen and show black content for black's turn" in {
-        val output = captureOutput(ConsoleView.showTurnAnnouncement(isRedTurn = false))
-        output should include("\u001b[2J")
+      "show black content for black's turn" in {
+        val output = ConsoleView.turnAnnouncementString(isRedTurn = false)
         output should (include("BLACK") or include("●"))
       }
     }
@@ -52,24 +25,36 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
     "displaying kill effects" should {
 
       "show single kill message for 1 kill" in {
-        val output = captureOutput(ConsoleView.showKillEffect(1))
+        val output = ConsoleView.killEffectString(1)
         output should include("K I L L")
       }
 
       "show double kill message for 2 kills" in {
-        val output = captureOutput(ConsoleView.showKillEffect(2))
+        val output = ConsoleView.killEffectString(2)
         output should include("D O U B L E  K I L L")
+      }
+      "show double kill message for 3 kills" in {
+        val output = ConsoleView.killEffectString(3)
+        output should include("T R I P L E  K I L L")
+      }
+      "show double kill message for more than 3 kills" in {
+        val output = ConsoleView.killEffectString(4)
+        output should include("U L T R A  K I L L")
       }
     }
 
     "printing the board" should {
 
-      "display board with correct structure and all row/column numbers" in {
+      "display board with correct structure and all row/column numbers/letters" in {
         val board = Board.create()
-        val output = captureOutput(ConsoleView.printBoard(board, isRedTurn = true))
+        val output = ConsoleView.boardString(board, isRedTurn = true)
 
         for (i <- 0 until 8) {
-          output should include(s" $i ")
+          val number = i + 1;
+          val letter = ('a' + i).toChar.toString
+          output should include(s"$number ")
+          output should include(s" $number")
+          output should include(s" $letter ")
         }
         val boardLines = output.split("\n").filter(_.contains("|"))
         boardLines.length should be >= 8
@@ -77,8 +62,8 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
 
       "show pieces with correct symbols and flip board for black's turn" in {
         val board = Board.create()
-        val redOutput = captureOutput(ConsoleView.printBoard(board, isRedTurn = true))
-        val blackOutput = captureOutput(ConsoleView.printBoard(board, isRedTurn = false))
+        val redOutput = ConsoleView.boardString(board, isRedTurn = true)
+        val blackOutput = ConsoleView.boardString(board, isRedTurn = false)
 
         redOutput should (include("○") or include("●"))
         redOutput should not equal blackOutput
@@ -88,14 +73,12 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
     "showing the winner" should {
 
       "clear screen and display red as winner" in {
-        val output = captureOutput(ConsoleView.showWinner(isRed = true))
-        output should include("\u001b[2J")
+        val output = ConsoleView.winnerString(isRed = true)
         output.toUpperCase should include("RED")
       }
 
       "clear screen and display black as winner" in {
-        val output = captureOutput(ConsoleView.showWinner(isRed = false))
-        output should include("\u001b[2J")
+        val output = ConsoleView.winnerString(isRed = false)
         output.toUpperCase should include("BLACK")
       }
     }

@@ -97,4 +97,7 @@ object GameLogic {
     }
     (red, black)
   }
+
+  def isValidPosition(row: Int, col: Int): Boolean =
+    row >= 0 && row < 8 && col >= 0 && col < 8
 }

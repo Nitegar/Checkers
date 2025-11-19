@@ -110,9 +110,4 @@ enum AsciiEffect(val art: String, val color: String = AnsiColor.Yellow) {
 """,
     AnsiColor.BrightBlack
   )
-
-  /** Print the effect to the console with its color. */
-  def show(): Unit = {
-    println(s"$color$art${AnsiColor.Reset}")
-  }
 }
