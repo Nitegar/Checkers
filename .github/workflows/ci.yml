@@ -21,10 +21,13 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install SBT
-        uses: coursier/setup-action@v1
+      - name: Cache SBT & Ivy
+        uses: actions/cache@v3
         with:
-          apps: sbt
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/**') }}
 
       - name: Compile
         run: sbt compile
