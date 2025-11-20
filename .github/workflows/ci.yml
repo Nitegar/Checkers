@@ -30,7 +30,7 @@ jobs:
         run: sbt compile
 
       - name: Run Tests
-        run: sbt +clean +coverage +test +coverageReport +coveralls
+        run: sbt test
 
   coverage:
     runs-on: ubuntu-latest
@@ -46,10 +46,13 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Generate Coverage & Upload to Coveralls
+      - name: Install SBT
+        uses: coursier/setup-action@v1
+        with:
+          apps: sbt
+
+      - name: Generate Scoverage & Upload to Coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          CI_BRANCH: ${{ github.ref_name }}
         run: |
-          sbt clean jacoco
-          sbt jacocoCoveralls
+          sbt clean coverage test coverageReport coveralls
