@@ -40,20 +40,6 @@ class BoardSpec extends AnyWordSpec with Matchers {
       }
     }
 
-    "validating positions" should {
 
-      "correctly identify valid coordinates" in {
-        Board.isValidPosition(0, 0) shouldBe true
-        Board.isValidPosition(7, 7) shouldBe true
-        Board.isValidPosition(3, 5) shouldBe true
-      }
-
-      "correctly identify invalid coordinates" in {
-        Board.isValidPosition(-1, 0) shouldBe false
-        Board.isValidPosition(0, 8) shouldBe false
-        Board.isValidPosition(8, 8) shouldBe false
-        Board.isValidPosition(-1, -1) shouldBe false
-      }
-    }
   }
 }

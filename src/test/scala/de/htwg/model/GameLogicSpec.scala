@@ -22,6 +22,7 @@ class GameLogicSpec extends AnyWordSpec with Matchers {
 
       "return false if no jumps exist on initial board" in {
         val board = Board.create()
+        board(0)(2) = King(isRed = true)
         GameLogic.hasJumpsAvailable(board, isRedTurn = true) shouldBe false
         GameLogic.hasJumpsAvailable(board, isRedTurn = false) shouldBe false
       }
@@ -38,7 +39,7 @@ class GameLogicSpec extends AnyWordSpec with Matchers {
         val board = Board.create()
         val moves = GameLogic.getValidMoves(board, 5, 0)
         moves should not be empty
-        moves.forall { case (r, c, _) => Board.isValidPosition(r, c) } shouldBe true
+        moves.forall { case (r, c, _) => GameLogic.isValidPosition(r, c) } shouldBe true
       }
 
       "return valid moves for a King piece" in {
@@ -47,16 +48,25 @@ class GameLogicSpec extends AnyWordSpec with Matchers {
         kingBoard(3)(3) = King(true)
         val moves = GameLogic.getValidMoves(kingBoard, 3, 3)
         moves should not be empty
-        moves.forall { case (r, c, _) => Board.isValidPosition(r, c) } shouldBe true
+        moves.forall { case (r, c, _) => GameLogic.isValidPosition(r, c) } shouldBe true
       }
     }
 
     "detecting jumps" should {
 
-      "detect a possible jump" in {
+      "detect a possible jump over regular" in {
         val board = Board.create().map(_.clone())
         board(2)(2) = Regular(true)
         board(1)(1) = Regular(false)
+        board(0)(0) = Empty
+        val jumps = GameLogic.getJumps(board, 2, 2, isRed = true, regular = true)
+        jumps should contain((0, 0, true))
+      }
+
+      "detect a possible jump over king" in {
+        val board = Board.create().map(_.clone())
+        board(2)(2) = Regular(true)
+        board(1)(1) = King(false)
         board(0)(0) = Empty
         val jumps = GameLogic.getJumps(board, 2, 2, isRed = true, regular = true)
         jumps should contain((0, 0, true))
@@ -75,12 +85,36 @@ class GameLogicSpec extends AnyWordSpec with Matchers {
         thirdTurnBoard(2)(3) shouldBe Regular(true)
       }
 
-      "promote Regular to King when reaching last row" in {
+      "promote red Regular to red King when reaching last row" in {
         val board = Board.create().map(_.clone())
         board(1)(2) = Regular(true)
         board(0)(3) = Empty
         val newBoard = GameLogic.makeMove(board, 1, 2, 0, 3)
         newBoard(0)(3) shouldBe a[King]
+      }
+
+      "promote black Regular to black King when reaching last row" in {
+        val board = Board.create().map(_.clone())
+        board(6)(2) = Regular(false)
+        board(7)(3) = Empty
+        val newBoard = GameLogic.makeMove(board, 6, 2, 7, 3)
+        newBoard(7)(3) shouldBe a[King]
+      }
+    }
+
+    "validating positions" should {
+
+      "correctly identify valid coordinates" in {
+        GameLogic.isValidPosition(0, 0) shouldBe true
+        GameLogic.isValidPosition(7, 7) shouldBe true
+        GameLogic.isValidPosition(3, 5) shouldBe true
+      }
+
+      "correctly identify invalid coordinates" in {
+        GameLogic.isValidPosition(-1, 0) shouldBe false
+        GameLogic.isValidPosition(0, 8) shouldBe false
+        GameLogic.isValidPosition(8, 8) shouldBe false
+        GameLogic.isValidPosition(-1, -1) shouldBe false
       }
     }
   }
