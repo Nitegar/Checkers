@@ -127,7 +127,7 @@ object GameController {
                 Thread.sleep(800)
                 return gameLoop(board, isRedTurn, false)
 
-              case _ => // Valid piece selected
+              case _ =>
             }
 
             val moves = getValidMoves(board, fromR, fromC)
