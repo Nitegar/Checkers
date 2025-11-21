@@ -2,69 +2,73 @@ package de.htwg.view
 
 import de.htwg.model.*
 import de.htwg.model.Board.*
-import de.htwg.view.AsciiEffect._
+import de.htwg.view.AsciiEffect
 
 object ConsoleView {
 
-  def clearScreen(): Unit = print("\u001b[2J\u001b[H")
-
-  def playBackgroundMusic(): Unit = println("♪♫ Background Music Playing ♫♪")
-
-  def showTurnAnnouncement(isRedTurn: Boolean): Unit = {
-    clearScreen()
-    if (isRedTurn) RedTurn.show()
-    else BlackTurn.show()
-    Thread.sleep(500)
-    clearScreen()
+  /** Turn announcement (pure string) */
+  def turnAnnouncementString(isRedTurn: Boolean): String = {
+    val effect = if (isRedTurn) AsciiEffect.RedTurn else AsciiEffect.BlackTurn
+    effect.color + effect.art + AnsiColor.Reset
   }
 
-  def showKillEffect(kills: Int): Unit = {
-    clearScreen()
-    kills match {
-      case 1 => SingleKill.show()
-      case 2 => DoubleKill.show()
-      case 3 => TripleKill.show()
-      case _ => UltraKill.show()
+  /** Kill effect as pure string */
+  def killEffectString(kills: Int): String = {
+    val effect = kills match {
+      case 1 => AsciiEffect.SingleKill
+      case 2 => AsciiEffect.DoubleKill
+      case 3 => AsciiEffect.TripleKill
+      case _ => AsciiEffect.UltraKill
     }
-    Thread.sleep(2000)
-    clearScreen()
+    effect.color + effect.art + AnsiColor.Reset
   }
 
-  def printBoard(board: Board, isRedTurn: Boolean): Unit = {
+  /** Winner screen as pure string */
+  def winnerString(isRed: Boolean): String = {
+    val effect = if (isRed) AsciiEffect.RedWins else AsciiEffect.BlackWins
+    effect.color + effect.art + AnsiColor.Reset
+  }
+
+  /** Full board as string */
+  def boardString(board: Board, isRedTurn: Boolean): String = {
     val reset = "\u001b[0m"
     val red = "\u001b[91m"
     val black = "\u001b[90m"
 
-    val displayBoard = if (isRedTurn) board else board.reverse.map(_.reverse)
-    playBackgroundMusic()
-    println("\n  " + (0 until 8).map(i => s" $i ").mkString)
-    println("  " + "+--" * 8 + "+")
+    val displayBoard =
+      if (isRedTurn) board else board.reverse.map(_.reverse)
+
+    val columns = ('a' to 'h').map(c => s" $c ").mkString
+    val sb = new StringBuilder
+
+    sb.append("\n   " + columns + "\n")
+    sb.append("  " + "+--" * 8 + "+" + "\n")
 
     for (row <- 0 until 8) {
-      print(s"$row |")
+      val rowNumber = row + 1
+      sb.append(s"$rowNumber |")
+
       for (col <- 0 until 8) {
         val piece = displayBoard(row)(col) match {
           case Empty => "  "
-          case Regular(true) => s"${red}○${reset} " // 🔴 Red regular piece
-          case Regular(false) => s"${black}●${reset} " // ⚫ Black regular piece
-          case King(true) => s"${red}◎${reset} " // 🔴 Red king
-          case King(false) => s"${black}◉${reset} " // ⚫ Black king
+          case Regular(true)  => s"${red}○${reset} "
+          case Regular(false) => s"${black}●${reset} "
+          case King(true)  => s"${red}◎${reset} "
+          case King(false) => s"${black}◉${reset} "
         }
-        print(piece + "|")
+        sb.append(piece + "|")
       }
-      println(s" $row")
-      println("  " + "+--" * 8 + "+")
+
+      sb.append(s" $rowNumber\n")
+      sb.append("  " + "+--" * 8 + "+" + "\n")
     }
 
-    println("\nPieces: " +
-      s"${red}○${reset}/${red}◎${reset} = Red, " +
-      s"${black}●${reset}/${black}◉${reset} = Black (Ring = King)"
+    sb.append("   " + columns + "\n\n")
+    sb.append(
+      s"Pieces: ${red}○${reset}/${red}◎${reset} = Red, " +
+        s"${black}●${reset}/${black}◉${reset} = Black (Ring = King)\n"
     )
-  }
 
-
-  def showWinner(isRed: Boolean): Unit = {
-    clearScreen()
-    println(if (isRed) "○ RED WINS!" else "● BLACK WINS!")
+    sb.toString()
   }
 }
