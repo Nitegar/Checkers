@@ -25,10 +25,6 @@ This launches the interactive Checkers board inside your terminal.
 
 ---
 
----
-
----
-
 ## 🖼️ Rules
 
 - Regular pieces move diagonally forward
