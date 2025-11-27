@@ -39,7 +39,5 @@ class BoardSpec extends AnyWordSpec with Matchers {
         }
       }
     }
-
-
   }
 }

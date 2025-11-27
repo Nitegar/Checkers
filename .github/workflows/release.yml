@@ -35,10 +35,10 @@ jobs:
       - name: Publish Release and Tag
         env:
           # Crucial for publishing to Sonatype/Maven Central
+          # Use GITHUB_TOKEN for authentication (automatically set by GitHub Actions)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           
           # Use sbt-ci-release's automatic release command
           # `sbt +ci-release` runs full release across all cross-versions

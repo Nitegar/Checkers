@@ -3,83 +3,131 @@ package de.htwg.view
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 import de.htwg.model._
-
+import java.io.ByteArrayOutputStream
 
 class ConsoleViewSpec extends AnyWordSpec with Matchers {
 
+  def withCapturedOutput(test: (ByteArrayOutputStream, ConsoleView) => Unit): Unit = {
+    val out = new ByteArrayOutputStream()
+    val view = new ConsoleView()
+    Console.withOut(out) {
+      test(out, view)
+    }
+  }
+
   "ConsoleView" when {
 
-    "showing turn announcements" should {
+    "showing startup" should {
+      "display a welcome message and rules" in withCapturedOutput { (out, view) =>
+        view.showStartup()
+        val output = out.toString
+        output should include("WELCOME TO CHECKERS")
+        output should include("Rules:")
+      }
+    }
 
-      "show red content for red's turn" in {
-        val output = ConsoleView.turnAnnouncementString(isRedTurn = true)
-        output should (include("RED") or include("○"))
+    "showing turn announcements" should {
+      "show red's turn" in withCapturedOutput { (out, view) =>
+        view.showTurnAnnouncement(isRedTurn = true)
+        val output = out.toString
+        output should include("RED")
       }
 
-      "show black content for black's turn" in {
-        val output = ConsoleView.turnAnnouncementString(isRedTurn = false)
-        output should (include("BLACK") or include("●"))
+      "show black's turn" in withCapturedOutput { (out, view) =>
+        view.showTurnAnnouncement(isRedTurn = false)
+        val output = out.toString
+        output should include("BLACK")
       }
     }
 
     "displaying kill effects" should {
-
-      "show single kill message for 1 kill" in {
-        val output = ConsoleView.killEffectString(1)
-        output should include("K I L L")
+      "show single kill message" in withCapturedOutput { (out, view) =>
+        view.showKillEffect(1)
+        out.toString should include("SINGLE KILL")
       }
 
-      "show double kill message for 2 kills" in {
-        val output = ConsoleView.killEffectString(2)
-        output should include("D O U B L E  K I L L")
-      }
-      "show double kill message for 3 kills" in {
-        val output = ConsoleView.killEffectString(3)
-        output should include("T R I P L E  K I L L")
-      }
-      "show double kill message for more than 3 kills" in {
-        val output = ConsoleView.killEffectString(4)
-        output should include("U L T R A  K I L L")
-      }
-    }
-
-    "printing the board" should {
-
-      "display board with correct structure and all row/column numbers/letters" in {
-        val board = Board.create()
-        val output = ConsoleView.boardString(board, isRedTurn = true)
-
-        for (i <- 0 until 8) {
-          val number = i + 1;
-          val letter = ('a' + i).toChar.toString
-          output should include(s"$number ")
-          output should include(s" $number")
-          output should include(s" $letter ")
-        }
-        val boardLines = output.split("\n").filter(_.contains("|"))
-        boardLines.length should be >= 8
+      "show double kill message" in withCapturedOutput { (out, view) =>
+        view.showKillEffect(2)
+        out.toString should include("DOUBLE KILL")
       }
 
-      "show pieces with correct symbols and flip board for black's turn" in {
-        val board = Board.create()
-        val redOutput = ConsoleView.boardString(board, isRedTurn = true)
-        val blackOutput = ConsoleView.boardString(board, isRedTurn = false)
+      "show triple kill message" in withCapturedOutput { (out, view) =>
+        view.showKillEffect(3)
+        out.toString should include("TRIPLE KILL")
+      }
 
-        redOutput should (include("○") or include("●"))
-        redOutput should not equal blackOutput
+      "show ultra kill message" in withCapturedOutput { (out, view) =>
+        view.showKillEffect(4)
+        out.toString should include("ULTRA KILL")
       }
     }
 
     "showing the winner" should {
-
-      "clear screen and display red as winner" in {
-        val output = ConsoleView.winnerString(isRed = true)
-        output.toUpperCase should include("RED")
+      "display red as winner" in withCapturedOutput { (out, view) =>
+        view.showWinner(isRed = true)
+        out.toString should include("RED WINS")
       }
 
-      "clear screen and display black as winner" in {
-        val output = ConsoleView.winnerString(isRed = false)
-        output.toUpperCase should include("BLACK")
+      "display black as winner" in withCapturedOutput { (out, view) =>
+        view.showWinner(isRed = false)
+        out.toString should include("BLACK WINS")
+      }
+    }
+
+    "displaying the board" should {
+      "show the board with pieces" in withCapturedOutput { (out, view) =>
+        val board = Board.create()
+        view.showBoard(board, isRedTurn = true)
+        val output = out.toString
+        output should include("a")
+        output should include("h")
+        output should include("1")
+        output should include("8")
+        output should include("○")
+        output should include("●")
+      }
+    }
+
+    "asking for move" should {
+      "prompt for red's move" in withCapturedOutput { (out, view) =>
+        view.askForMovePrompt(isRedTurn = true, 12, 12)
+        val output = out.toString
+        output should include("RED (○)'s turn")
+        output should include("Enter move")
+      }
+
+      "prompt for black's move" in withCapturedOutput { (out, view) =>
+        view.askForMovePrompt(isRedTurn = false, 12, 12)
+        val output = out.toString
+        output should include("BLACK (●)'s turn")
+        output should include("Enter move")
+      }
+    }
+
+    "showing messages" should {
+      "display invalid input message" in withCapturedOutput { (out, view) =>
+        view.showInvalidInput()
+        out.toString should include("Invalid input")
+      }
+
+      "display invalid move message" in withCapturedOutput { (out, view) =>
+        view.showInvalidMove()
+        out.toString should include("Invalid move")
+      }
+
+      "display not your piece message" in withCapturedOutput { (out, view) =>
+        view.showNotYourPiece()
+        out.toString should include("That piece does not belong to you")
+      }
+
+      "display must jump message" in withCapturedOutput { (out, view) =>
+        view.showMustJump()
+        out.toString should include("You must make a jump")
+      }
+
+      "display thanks message" in withCapturedOutput { (out, view) =>
+        view.showThanks()
+        out.toString should include("Thanks for playing")
       }
     }
   }
