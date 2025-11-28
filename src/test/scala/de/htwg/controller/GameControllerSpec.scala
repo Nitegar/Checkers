@@ -170,6 +170,18 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
         output should include("That piece does not belong to you!")
       }
 
+      "reject when trying to move opponent's king piece (Red turn)" in {
+        val board = createEmptyBoard()
+        board(0)(0) = King(isRed = false) // Red king at a8 (flipped to a1 for black)
+        board(3)(3) = Regular(isRed = true) // Black piece for turn validity
+
+        val output = captureOutput("a1 b2\nq\n") {
+          GameController.add(ConsoleView)
+          GameController.gameLoop(board, isRedTurn = true)
+        }
+        output should include("That piece does not belong to you!")
+      }
+
       "reject when selecting empty position" in {
         val board = createEmptyBoard()
         board(1)(1) = Regular(isRed = false) // Red piece at f6
