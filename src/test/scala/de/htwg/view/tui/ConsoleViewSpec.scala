@@ -1,8 +1,9 @@
-package de.htwg.view
+package de.htwg.view.tui
 
-import org.scalatest.wordspec.AnyWordSpec
+import de.htwg.model.*
+import de.htwg.view.tui.ConsoleView
 import org.scalatest.matchers.should.Matchers
-import de.htwg.model._
+import org.scalatest.wordspec.AnyWordSpec
 
 
 class ConsoleViewSpec extends AnyWordSpec with Matchers {

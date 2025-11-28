@@ -1,0 +1,21 @@
+package de.htwg.model
+
+import de.htwg.model.Board.Board
+
+sealed trait GameEvent
+
+// State Change Events
+case class StartGame() extends GameEvent
+case class BoardUpdated(board: Board, isRedTurn: Boolean) extends GameEvent
+case class GameEnded(winnerIsRed: Boolean) extends GameEvent
+
+// Message/Feedback Events
+case object QuitGame extends GameEvent
+// RequestInput now only needs turn info, as scores are available in BoardUpdated
+case class RequestInput(isRedTurn: Boolean) extends GameEvent
+case class InvalidInput(message: String) extends GameEvent
+case class MoveFailed(reason: String) extends GameEvent
+
+// UI/Effect Events
+case class TurnAnnounced(isRedTurn: Boolean) extends GameEvent
+case class KillEffect(kills: Int) extends GameEvent

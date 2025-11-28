@@ -1,6 +1,7 @@
 package de.htwg.model
 
 import de.htwg.model.Board.*
+import de.htwg.model.move.{KingMoveStrategy, RegularMoveStrategy}
 import de.htwg.model.{Empty, King, Regular}
 
 object GameLogic {
@@ -9,24 +10,11 @@ object GameLogic {
     board(row)(col) match {
       case Empty => Nil
       case Regular(isRed) =>
-        val direction = if (isRed) -1 else 1
-        val moves = List(
-          (row + direction, col - 1, false),
-          (row + direction, col + 1, false)
-        ).filter { case (r, c, _) =>
-          isValidPosition(r, c) && board(r)(c) == Empty
-        }
-        val jumps = getJumps(board, row, col, isRed, regular = true)
-        jumps ++ moves
+        val strategy = new RegularMoveStrategy(isRed)
+        strategy.validMoves(board, row, col)
       case King(isRed) =>
-        val moves = List(
-          (row - 1, col - 1, false), (row - 1, col + 1, false),
-          (row + 1, col - 1, false), (row + 1, col + 1, false)
-        ).filter { case (r, c, _) =>
-          isValidPosition(r, c) && board(r)(c) == Empty
-        }
-        val jumps = getJumps(board, row, col, isRed, regular = false)
-        jumps ++ moves
+        val strategy = new KingMoveStrategy(isRed)
+        strategy.validMoves(board, row, col)
     }
   }
 

@@ -1,14 +1,21 @@
 package de.htwg.controller
 
-import scala.io.StdIn.readLine
-import de.htwg.model._
-import de.htwg.model.Board._
-import GameLogic._
-import de.htwg.view.ConsoleView
+import de.htwg.model.*
+import de.htwg.model.Board.*
+import de.htwg.model.GameLogic.*
+import de.htwg.model.command.MoveCommand
+import de.htwg.util.Observable
+import de.htwg.view.tui.ConsoleView
 
 import scala.annotation.tailrec
+import scala.io.StdIn.readLine
 
-object GameController {
+/**
+ * GameController acts as the central state manager and event publisher (Subject).
+ * It contains only game logic and publishes abstract GameEvents.
+ * It is completely freed from all string literals and console I/O, except for readLine().
+ */
+object GameController extends Observable[GameEvent] {
 
   // Convert column letter (a-h) to index (0-7)
   private def columnToIndex(col: Char): Option[Int] = {
@@ -47,20 +54,12 @@ object GameController {
     } else None
   }
 
-  /** Clear the terminal screen (controller handles side-effects). */
-  private def clearScreen(): Unit = print("\u001b[2J\u001b[H")
-
   def startGame(): Unit = {
-    clearScreen()
-    println("=" * 50)
-    println("          WELCOME TO CHECKERS")
-    println("=" * 50)
-    println("\nRules:")
-    println("- Regular pieces move diagonally forward")
-    println("- Kings move diagonally in any direction")
-    println("- You must jump when available")
-    println("- Reach the opposite end to become a King")
-    println("\nPress Enter to start...")
+    this.add(ConsoleView)
+
+    notifyObservers(StartGame())
+
+    notifyObservers(RequestInput(isRedTurn = true))
     readLine()
 
     val board = Board.create()
@@ -68,93 +67,71 @@ object GameController {
   }
 
   @tailrec
-  def gameLoop(board: Board, isRedTurn: Boolean, showTurn: Boolean = true): Unit = {
-    if (showTurn) {
-      clearScreen()
-      // Print turn announcement, wait, then clear again (controller responsible for timing/clearing)
-      println(ConsoleView.turnAnnouncementString(isRedTurn))
-      Thread.sleep(500)
-      clearScreen()
-    }
-
-    // Print the board (controller prints the string returned by the pure view)
-    println(ConsoleView.boardString(board, isRedTurn))
-
+  def gameLoop(board: Board, isRedTurn: Boolean): Unit = {
     val (red, black) = countPieces(board)
-    if (red == 0) {
-      clearScreen()
-      println(ConsoleView.winnerString(isRed = false))
-      return
-    }
-    if (black == 0) {
-      clearScreen()
-      println(ConsoleView.winnerString(isRed = true))
+    if (red == 0 || black == 0) {
+      notifyObservers(GameEnded(winnerIsRed = black == 0))
       return
     }
 
-    println(s"\n${if (isRedTurn) "RED (○)" else "BLACK (●)"}'s turn (Red: $red, Black: $black)")
-    print("Enter move (e.g., 'b3 c4') or 'quit'/'q': ")
+    notifyObservers(TurnAnnounced(isRedTurn))
+    Thread.sleep(500)
+
+    notifyObservers(BoardUpdated(board, isRedTurn))
+
+    notifyObservers(RequestInput(isRedTurn))
 
     readLine().trim.toLowerCase match {
-      case "quit" | "q" => println("Thanks for playing!")
+      case "quit" | "q" =>
+        notifyObservers(QuitGame)
       case input =>
         parseInput(input) match {
           case None =>
-            println("❌ Invalid input. Use format: colRow colRow (e.g., b3 c4)")
+            notifyObservers(InvalidInput("Invalid format."))
             Thread.sleep(800)
-            gameLoop(board, isRedTurn, false)
+            gameLoop(board, isRedTurn)
 
           case Some((fromRow, fromCol, toRow, toCol)) =>
-            // Flip coordinates if it's black's turn (board was displayed mirrored earlier)
             val (fromR, fromC, toR, toC) =
               if (isRedTurn) (fromRow, fromCol, toRow, toCol)
-              else (7 - fromRow, 7 - fromCol, 7 - toRow, 7 - toCol)
+              else (fromRow, fromCol-1, 7 - toRow, 7 - toCol)
 
-            // Check if the player is selecting their own piece
             board(fromR)(fromC) match {
               case Regular(red) if red != isRedTurn =>
-                println("❌ That piece does not belong to you!")
+                notifyObservers(MoveFailed("Not your piece."))
                 Thread.sleep(800)
-                return gameLoop(board, isRedTurn, false)
-
+                return gameLoop(board, isRedTurn)
               case King(red) if red != isRedTurn =>
-                println("❌ That piece does not belong to you!")
+                notifyObservers(MoveFailed("Not your piece."))
                 Thread.sleep(800)
-                return gameLoop(board, isRedTurn, false)
-
+                return gameLoop(board, isRedTurn)
               case Empty =>
-                println("❌ No piece at that position.")
+                notifyObservers(MoveFailed("No piece at that position."))
                 Thread.sleep(800)
-                return gameLoop(board, isRedTurn, false)
-
+                return gameLoop(board, isRedTurn)
               case _ =>
             }
 
-            val moves = getValidMoves(board, fromR, fromC)
-            val hasJumps = hasJumpsAvailable(board, isRedTurn)
-            val move = moves.find { case (r, c, _) => r == toR && c == toC }
+            val command = MoveCommand(board, fromR, fromC, toR, toC, isRedTurn)
+            val (newBoard, success) = command.execute()
 
-            move match {
-              case Some((r, c, isJump)) if !hasJumps || isJump =>
-                val newBoard = makeMove(board, fromR, fromC, toR, toC)
-                if (isJump) {
-                  // controller prints the kill effect returned by view and manages timing/clearing
-                  clearScreen()
-                  println(ConsoleView.killEffectString(1))
-                  Thread.sleep(2000)
-                  clearScreen()
-                }
-                gameLoop(newBoard, !isRedTurn, true)
+            if (success) {
+              if (command.wasJump) {
+                notifyObservers(KillEffect(1))
+                Thread.sleep(2000)
+              }
+              gameLoop(newBoard, !isRedTurn)
 
-              case Some(_) =>
-                println("❌ You must make a jump when available!")
-                Thread.sleep(800)
-                gameLoop(board, isRedTurn, false)
-
-              case None =>
-                println("❌ Invalid move.")
-                Thread.sleep(800)
-                gameLoop(board, isRedTurn, false)
+            } else {
+              val requiredJumpMissed = hasJumpsAvailable(board, isRedTurn)
+              val reason = if (requiredJumpMissed) {
+                "Must make jump."
+              } else {
+                "Invalid move."
+              }
+              notifyObservers(MoveFailed(reason))
+              Thread.sleep(800)
+              gameLoop(board, isRedTurn)
             }
         }
     }

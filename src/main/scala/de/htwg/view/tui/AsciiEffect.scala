@@ -1,4 +1,4 @@
-package de.htwg.view
+package de.htwg.view.tui
 
 object AnsiColor {
   val Reset = "\u001b[0m"
