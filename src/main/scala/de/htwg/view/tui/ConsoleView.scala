@@ -22,15 +22,15 @@ object ConsoleView extends Observer[GameEvent] {
       // Display the welcome and rules message
       println(
         """
-  ==================================================
-                WELCOME TO CHECKERS
-  ==================================================
-  Rules:
-  - Regular pieces move diagonally forward
-  - Kings move diagonally in any direction
-  - You must jump when available
-  - Reach the opposite end to become a King
-  """
+          ==================================================
+                        WELCOME TO CHECKERS
+          ==================================================
+          Rules:
+          - Regular pieces move diagonally forward
+          - Kings move diagonally in any direction
+          - You must jump when available
+          - Reach the opposite end to become a King
+        """
       )
 
     // --- State Change Events ---
@@ -56,12 +56,8 @@ object ConsoleView extends Observer[GameEvent] {
         print(s"\n${player}'s turn (Red: ${redCount}, Black: ${blackCount})\nEnter move (e.g., 'b3 c4') or 'quit'/'q': ")
       }
 
-    // ... (Rest of event handling: InvalidInput, MoveFailed, QuitGame, TurnAnnounced, KillEffect remain unchanged) ...
-    case InvalidInput(abstractMessage) =>
-      abstractMessage match {
-        case "Invalid format." => println("❌ Invalid input. Use format: colRow colRow (e.g., b3 c4)")
-        case _ => println(s"❌ Invalid input: $abstractMessage")
-      }
+    case InvalidInput() =>
+      println("❌ Invalid input. Use format: colRow colRow (e.g., b3 c4)")
 
     case MoveFailed(abstractReason) =>
       abstractReason match {
@@ -82,8 +78,6 @@ object ConsoleView extends Observer[GameEvent] {
     case KillEffect(kills) =>
       clearScreen()
       println(killEffectString(kills))
-
-    case _ => // Ignore other events if necessary
   }
 
 
@@ -96,7 +90,7 @@ object ConsoleView extends Observer[GameEvent] {
     val effect = kills match {
       case 1 => AsciiEffect.SingleKill
       case 2 => AsciiEffect.DoubleKill
-      // ... rest of match cases
+      case 3 => AsciiEffect.TripleKill
       case _ => AsciiEffect.UltraKill
     }
     effect.color + effect.art + AnsiColor.Reset
@@ -108,7 +102,6 @@ object ConsoleView extends Observer[GameEvent] {
   }
 
   def boardString(board: Board, isRedTurn: Boolean): String = {
-    // ... (board rendering logic remains unchanged) ...
     val reset = "\u001b[0m"
     val red = "\u001b[91m"
     val black = "\u001b[90m"
@@ -119,20 +112,20 @@ object ConsoleView extends Observer[GameEvent] {
     val columns = ('a' to 'h').map(c => s" $c ").mkString
     val sb = new StringBuilder
 
-    sb.append("\n  " + columns + "\n")
+    sb.append("\n   " + columns + "\n")
     sb.append("  " + "+--" * 8 + "+" + "\n")
 
     for (row <- 0 until 8) {
-      val rowNumber = if (isRedTurn) row + 1 else 8 - row
+      val rowNumber = row + 1
       sb.append(s"$rowNumber |")
 
       for (col <- 0 until 8) {
         val piece = displayBoard(row)(col) match {
           case Empty => "  "
-          case Regular(true)  => s"${red}○${reset} "
+          case Regular(true) => s"${red}○${reset} "
           case Regular(false) => s"${black}●${reset} "
-          case King(true)     => s"${red}◎${reset} "
-          case King(false)    => s"${black}◉${reset} "
+          case King(true) => s"${red}◎${reset} "
+          case King(false) => s"${black}◉${reset} "
         }
         sb.append(piece + "|")
       }
@@ -141,7 +134,7 @@ object ConsoleView extends Observer[GameEvent] {
       sb.append("  " + "+--" * 8 + "+" + "\n")
     }
 
-    sb.append("  " + columns + "\n\n")
+    sb.append("   " + columns + "\n\n")
     sb.append(
       s"Pieces: ${red}○${reset}/${red}◎${reset} = Red, " +
         s"${black}●${reset}/${black}◉${reset} = Black (Ring = King)\n"

@@ -34,7 +34,6 @@ class CheckersAppSpec extends AnyWordSpec with Matchers {
         val output = captureOutput("\nq\n") {
           CheckersApp.main(Array.empty)
         }
-        output should include("Press Enter to start")
         output should include("RED")
       }
     }

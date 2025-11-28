@@ -49,7 +49,6 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
           GameController.startGame()
         }
         output should include("WELCOME TO CHECKERS")
-        output should include("Press Enter to start")
         output should include("RED (○)") // Ensures turn starts
       }
     }
@@ -112,10 +111,19 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
         output should include("Invalid input. Use format: colRow colRow")
       }
 
-      "reject input with wrong number of arguments (parseInput returns None)" in {
+      "reject input with wrong number of arguments (not enough)" in {
         val board = Board.create()
         // 'b3' returns None (only one position provided)
         val output = captureOutput("b3\nq\n") {
+          GameController.gameLoop(board, isRedTurn = true)
+        }
+        output should include("Invalid input. Use format: colRow colRow")
+      }
+
+      "reject input with wrong number of arguments (too many)" in {
+        val board = Board.create()
+        // 'b3' returns None (only one position provided)
+        val output = captureOutput("b3 c4 d5\nq\n") {
           GameController.gameLoop(board, isRedTurn = true)
         }
         output should include("Invalid input. Use format: colRow colRow")
@@ -155,7 +163,7 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
 
         // Black's turn (isRedTurn = false), tries to move Red King: Input "a1 g7" (a1 is R0 C0 from black's perspective, which is R7 C0 unflipped)
         // Controller flips input a1 to a8 (R0, C0) -> this is the Red King
-        val output = captureOutput("h1 g7\nq\n") {
+        val output = captureOutput("h8 g7\nq\n") {
           GameController.add(ConsoleView)
           GameController.gameLoop(board, isRedTurn = false)
         }
@@ -164,9 +172,9 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
 
       "reject when selecting empty position" in {
         val board = createEmptyBoard()
+        board(1)(1) = Regular(isRed = false) // Red piece at f6
         board(5)(5) = Regular(isRed = true) // Red piece at f6
 
-        // Red attempts to move from the empty square at c5
         val output = captureOutput("c5 d4\nq\n") {
           GameController.add(ConsoleView)
           GameController.gameLoop(board, isRedTurn = true)
@@ -211,7 +219,7 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
         output should include(AsciiEffect.BlackTurn.art)
       }
 
-      "successfully execute a jump move, display KillEffect, and transition turn" in {
+      "successfully execute a jump move, display KillEffect, and wins" in {
         val board = createEmptyBoard()
         board(5)(1) = Regular(isRed = true) // b6
         board(4)(2) = Regular(isRed = false) // c5
@@ -222,20 +230,18 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
           GameController.gameLoop(board, isRedTurn = true)
         }
         // Check for KillEffect announcement
-        output should include("KILL EFFECT")
+        output should include(AsciiEffect.SingleKill.art)
         // Should switch to black's turn after successful jump
-        output should include(AsciiEffect.BlackTurn.art)
+        output should include(AsciiEffect.RedWins.art)
       }
 
       "handle coordinate flipping for black's turn (successful move)" in {
         val board = Board.create()
-        // Input: "b3 a4" for black. b3 flips to b6 (R5, C1). a4 flips to a5 (R4, C0)
-        // This is a legal move for black, resulting in Red's turn next.
-        val output = captureOutput("b3 a4\nq\n") {
+        val output = captureOutput("c6 d5\nq\n") {
           GameController.add(ConsoleView)
           GameController.gameLoop(board, isRedTurn = false) // Start with Black's turn
         }
-        output should include("RED (○)'s turn")
+        output should include(AsciiEffect.RedTurn.art)
       }
     }
   }

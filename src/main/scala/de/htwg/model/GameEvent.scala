@@ -13,7 +13,7 @@ case class GameEnded(winnerIsRed: Boolean) extends GameEvent
 case object QuitGame extends GameEvent
 // RequestInput now only needs turn info, as scores are available in BoardUpdated
 case class RequestInput(isRedTurn: Boolean) extends GameEvent
-case class InvalidInput(message: String) extends GameEvent
+case class InvalidInput() extends GameEvent
 case class MoveFailed(reason: String) extends GameEvent
 
 // UI/Effect Events

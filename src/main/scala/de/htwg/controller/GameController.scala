@@ -35,16 +35,13 @@ object GameController extends Observable[GameEvent] {
     if (parts.length != 2) return None
 
     val positions = parts.flatMap { part =>
-      if (part.length < 2) None
-      else {
-        val col = part.charAt(0)
-        val rowStr = part.substring(1)
-        for {
-          colIdx <- columnToIndex(col)
-          rowNum <- rowStr.toIntOption
-          rowIdx <- rowToIndex(rowNum)
-        } yield (rowIdx, colIdx)
-      }
+      val col = part.charAt(0)
+      val rowStr = part.substring(1)
+      for {
+        colIdx <- columnToIndex(col)
+        rowNum <- rowStr.toIntOption
+        rowIdx <- rowToIndex(rowNum)
+      } yield (rowIdx, colIdx)
     }
 
     if (positions.length == 2) {
@@ -87,14 +84,14 @@ object GameController extends Observable[GameEvent] {
       case input =>
         parseInput(input) match {
           case None =>
-            notifyObservers(InvalidInput("Invalid format."))
+            notifyObservers(InvalidInput())
             Thread.sleep(800)
             gameLoop(board, isRedTurn)
 
           case Some((fromRow, fromCol, toRow, toCol)) =>
             val (fromR, fromC, toR, toC) =
               if (isRedTurn) (fromRow, fromCol, toRow, toCol)
-              else (fromRow, fromCol-1, 7 - toRow, 7 - toCol)
+              else (7 - fromRow, 7 - fromCol, 7 - toRow, 7 - toCol)
 
             board(fromR)(fromC) match {
               case Regular(red) if red != isRedTurn =>
