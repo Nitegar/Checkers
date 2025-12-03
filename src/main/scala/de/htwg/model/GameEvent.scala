@@ -19,3 +19,7 @@ case class MoveFailed(reason: String) extends GameEvent
 // UI/Effect Events
 case class TurnAnnounced(isRedTurn: Boolean) extends GameEvent
 case class KillEffect(kills: Int) extends GameEvent
+
+case object MoveUndone extends GameEvent
+case object MoveRedone extends GameEvent
+

@@ -16,6 +16,12 @@ object ConsoleView extends Observer[GameEvent] {
 
   override def update(event: GameEvent): Unit = event match {
 
+    case MoveUndone =>
+      println("⬅️ Move successfully undone.")
+
+    case MoveRedone =>
+      println("➡️ Move successfully redone.")
+
     // --- New Start Game Event ---
     case StartGame() =>
       clearScreen()

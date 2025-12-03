@@ -18,19 +18,20 @@ import scala.io.StdIn.readLine
 object GameController extends Observable[GameEvent] {
 
   // Convert column letter (a-h) to index (0-7)
-  private def columnToIndex(col: Char): Option[Int] = {
+  def columnToIndex(col: Char): Option[Int] = {
     val index = col - 'a'
     if (index >= 0 && index < 8) Some(index) else None
   }
 
   // Convert row number (1-8) to index (0-7)
-  private def rowToIndex(row: Int): Option[Int] = {
+  def rowToIndex(row: Int): Option[Int] = {
     val index = row - 1
     if (index >= 0 && index < 8) Some(index) else None
   }
 
-  // Parse input in format: "colRow colRow" (e.g., "b3 c4")
-  private def parseInput(input: String): Option[(Int, Int, Int, Int)] = {
+  // Expose parseInput for testing (if necessary)
+  private[controller] def parseInput(input: String): Option[(Int, Int, Int, Int)] = {
+    // ... (Original implementation)
     val parts = input.split("\\s+")
     if (parts.length != 2) return None
 
@@ -51,86 +52,37 @@ object GameController extends Observable[GameEvent] {
     } else None
   }
 
+  // --- State Management ---
+  private var currentState: GameState = AwaitingInputState
+
+  // (columnToIndex, rowToIndex, and parseInput remain UNCHANGED)
+
   def startGame(): Unit = {
     this.add(ConsoleView)
 
     notifyObservers(StartGame())
 
     notifyObservers(RequestInput(isRedTurn = true))
-    readLine()
+    readLine() // Blocking input for "Press Enter"
 
-    val board = Board.create()
-    gameLoop(board, isRedTurn = true)
+    // --- State Machine Execution Loop ---
+    var currentBoard: Board = Board.create()
+    var isRedTurn: Boolean = true
+
+    // Start the state machine iteration
+    currentState = AwaitingInputState
+
+    while (currentState != GameOverState) {
+      // The current state processes the request (input, execution, etc.)
+      // and returns the NEXT state, the new board, and whose turn it is.
+      val (nextState, newBoard, nextTurn) = currentState.process(this, currentBoard, isRedTurn)
+
+      // Update the context variables for the next iteration
+      currentState = nextState
+      currentBoard = newBoard
+      isRedTurn = nextTurn
+    }
+    // Loop ends when currentState is GameOverState
   }
 
-  @tailrec
-  def gameLoop(board: Board, isRedTurn: Boolean): Unit = {
-    val (red, black) = countPieces(board)
-    if (red == 0 || black == 0) {
-      notifyObservers(GameEnded(winnerIsRed = black == 0))
-      return
-    }
-
-    notifyObservers(TurnAnnounced(isRedTurn))
-    Thread.sleep(500)
-
-    notifyObservers(BoardUpdated(board, isRedTurn))
-
-    notifyObservers(RequestInput(isRedTurn))
-
-    readLine().trim.toLowerCase match {
-      case "quit" | "q" =>
-        notifyObservers(QuitGame)
-      case input =>
-        parseInput(input) match {
-          case None =>
-            notifyObservers(InvalidInput())
-            Thread.sleep(800)
-            gameLoop(board, isRedTurn)
-
-          case Some((fromRow, fromCol, toRow, toCol)) =>
-            val (fromR, fromC, toR, toC) =
-              if (isRedTurn) (fromRow, fromCol, toRow, toCol)
-              else (7 - fromRow, 7 - fromCol, 7 - toRow, 7 - toCol)
-
-            board(fromR)(fromC) match {
-              case Regular(red) if red != isRedTurn =>
-                notifyObservers(MoveFailed("Not your piece."))
-                Thread.sleep(800)
-                return gameLoop(board, isRedTurn)
-              case King(red) if red != isRedTurn =>
-                notifyObservers(MoveFailed("Not your piece."))
-                Thread.sleep(800)
-                return gameLoop(board, isRedTurn)
-              case Empty =>
-                notifyObservers(MoveFailed("No piece at that position."))
-                Thread.sleep(800)
-                return gameLoop(board, isRedTurn)
-              case _ =>
-            }
-
-            val command = MoveCommand(board, fromR, fromC, toR, toC, isRedTurn)
-            val (newBoard, success) = command.execute()
-
-            if (success) {
-              if (command.wasJump) {
-                notifyObservers(KillEffect(1))
-                Thread.sleep(2000)
-              }
-              gameLoop(newBoard, !isRedTurn)
-
-            } else {
-              val requiredJumpMissed = hasJumpsAvailable(board, isRedTurn)
-              val reason = if (requiredJumpMissed) {
-                "Must make jump."
-              } else {
-                "Invalid move."
-              }
-              notifyObservers(MoveFailed(reason))
-              Thread.sleep(800)
-              gameLoop(board, isRedTurn)
-            }
-        }
-    }
-  }
 }
