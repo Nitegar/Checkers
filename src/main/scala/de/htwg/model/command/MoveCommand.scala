@@ -11,8 +11,8 @@ case class MoveCommand(
                         toCol: Int,
                         isRedTurn: Boolean
                       ) extends Command {
-  private val boardAfter: Board = initialBoard // Stores the board state *after* the move chain
-  private val executionSuccess: Boolean = false
+  private var boardAfter: Board = initialBoard
+  private var executionSuccess: Boolean = false
   var wasJump: Boolean = false
   var killCount: Int = 0
 
@@ -47,17 +47,22 @@ case class MoveCommand(
     wasJump = attemptedMoveIsJump
     killCount = kills
 
-    if (wasJump) {
+    val finalBoard: Board = if (wasJump) {
       // 2. If it was a jump, check for a chain reaction
-      val (finalBoard, totalKills) = GameLogic.findJumpChain(boardAfterFirstMove, toRow, toCol, kills)
+      val (boardAfterChain, totalKills) = GameLogic.findJumpChain(boardAfterFirstMove, toRow, toCol, kills)
       killCount = totalKills // Update the total kill count
-
-      // Return the board after the full chain
-      (finalBoard, true)
+      boardAfterChain
     } else {
       // Simple non-jump move
-      (boardAfterFirstMove, true)
+      boardAfterFirstMove
     }
+
+    // 🎯 FIX 2: Store the result of successful execution 🎯
+    this.boardAfter = finalBoard
+    this.executionSuccess = true
+
+    // Return the board after the full chain
+    (finalBoard, true)
   }
 
   /**

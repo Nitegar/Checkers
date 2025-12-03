@@ -121,6 +121,7 @@ case class MoveExecutionState(fromRow: Int, fromCol: Int, toRow: Int, toCol: Int
         controller.notifyObservers(KillEffect(command.killCount))
         Thread.sleep(2000)
       }
+      CommandHistory.push(command)
       (AwaitingInputState, newBoard, !isRedTurn)
     } else {
       val requiredJumpMissed = hasJumpsAvailable(currentBoard, isRedTurn)
