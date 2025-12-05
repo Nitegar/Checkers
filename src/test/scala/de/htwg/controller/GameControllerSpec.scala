@@ -1,296 +1,323 @@
 package de.htwg.controller
 
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.should.Matchers
 import de.htwg.model.*
 import de.htwg.model.Board.Board
-import de.htwg.view.AsciiEffect
+import de.htwg.model.command.CommandHistory
+import de.htwg.view.tui.ConsoleView
+import org.scalatest.TryValues.convertTryToSuccessOrFailure
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, PrintStream}
+import java.io.ByteArrayInputStream
+import scala.util.Success
 
 class GameControllerSpec extends AnyWordSpec with Matchers {
 
-  private def createEmptyBoard(): Board = {
-    val board = Array.ofDim[Piece](8, 8)
-    for {
-      row <- 0 until 8
-      col <- 0 until 8
-    } {
-      board(row)(col) = Empty
-    }
-    board
-  }
 
-  /** Helper to capture printed output */
-  private def captureOutput(input: String = "")(block: => Unit): String = {
-    val outStream = new ByteArrayOutputStream()
+  private def createSimpleBoard(): Board = Board().empty()
+    .addPiece(5, 4, Regular(isRed = true)) // Red at e6 (R5, C4)
+    .addPiece(2, 3, Regular(isRed = false)) // Black at d3 (R2, C3)
+    .build()
+
+  /**
+   * Helper function to execute a single step of the state machine for testing
+   * the InputHandlingState, which requires mocking readLine().
+   */
+  private def processStep(state: GameState, board: Board, isRedTurn: Boolean, input: String): (GameState, Board, Boolean) = {
+    // Use ByteArrayInputStream to mock readLine()
     val inStream = new ByteArrayInputStream(input.getBytes)
-    Console.withOut(new PrintStream(outStream)) {
-      Console.withIn(inStream) {
-        block
-      }
+    // We only need to redirect Console.in for the duration of the process call
+    Console.withIn(inStream) {
+      state.process(GameController, board, isRedTurn)
     }
-    outStream.toString
   }
 
-  "GameController" when {
+  "GameController.parseInput" when {
 
-    "starting a new game" should {
+    "given valid checker notation" should {
 
-      "print welcome message and initial board" in {
-        val output = captureOutput("\nq\n") {
-          GameController.startGame()
-        }
-        output should include("WELCOME TO CHECKERS")
-        output should include("Press Enter to start")
-        output should include("RED (○)")
+      "parse a Red forward move (a6 b5)" in {
+        // a6 (R5, C0) -> b5 (R4, C1)
+        GameController.parseInput("a6 b5") should be(Success(Input(5, 0, 4, 1)))
+      }
+
+      "parse a Black forward move (h1 g2)" in {
+        // h1 (R0, C7) -> g2 (R1, C6)
+        GameController.parseInput("h1 g2") should be(Success(Input(0, 7, 1, 6)))
+      }
+
+      "handle mixed case input (A6 B5)" in {
+        GameController.parseInput("A6 B5") should be(Success(Input(5, 0, 4, 1)))
+      }
+
+      "handle extra whitespace" in {
+        GameController.parseInput("  a6  b5  ") should be(Success(Input(5, 0, 4, 1)))
       }
     }
 
-    "running the game loop" should {
+    "given invalid notation" should {
 
-      "end immediately if red has no pieces remaining" in {
-        val board = createEmptyBoard()
-        val output = captureOutput() {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("BLACK")
+      "return Failure for completely wrong format (missing destination)" in {
+        GameController.parseInput("a6").failure.exception shouldBe an[IllegalArgumentException]
+        GameController.parseInput("a6").failure.exception.getMessage should startWith("Invalid format")
       }
 
-      "end immediately if black has no pieces remaining" in {
-        val board = Board.create()
-        // Remove black pieces
-        for (r <- 0 until 3; c <- 0 until 8 if (r + c) % 2 == 1) {
-          board(r)(c) = Empty
-        }
-
-        val output = captureOutput() {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("RED")
+      "return Failure for completely wrong format (too many parts)" in {
+        GameController.parseInput("a6 b5 c4").failure.exception shouldBe an[IllegalArgumentException]
+        GameController.parseInput("a6 b5 c4").failure.exception.getMessage should startWith("Invalid format")
       }
 
-      "quit when player enters 'quit'" in {
-        val board = Board.create()
-        val output = captureOutput("quit\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Thanks for playing!")
+
+      "return Failure for invalid source column (z6 b5)" in {
+        GameController.parseInput("z6 b5").failure.exception shouldBe an [IllegalArgumentException]
+        GameController.parseInput("z6 b5").failure.exception.getMessage should include("Invalid column character: 'z'. Expected 'a'-'h")
       }
 
-      "quit when player enters 'q'" in {
-        val board = Board.create()
-        val output = captureOutput("q\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Thanks for playing!")
+      "return Failure for invalid source row (aR b5) - Non-numeric" in {
+        GameController.parseInput("aR b5").failure.exception shouldBe an [IllegalArgumentException]
+        GameController.parseInput("aR b5").failure.exception.getMessage should include("Invalid source row input: 'r'. Expected a digit (1-8).")
       }
 
-      "not show turn announcement when showTurn is false" in {
-        val board = createEmptyBoard()
-        val output = captureOutput() {
-          GameController.gameLoop(board, isRedTurn = true, showTurn = false)
-        }
-        // Should still display board but game ends immediately (no pieces)
-        output should not be empty
+      "return Failure for out-of-bounds source row (a9 b5)" in {
+        GameController.parseInput("a9 b5").failure.exception shouldBe an[IllegalArgumentException]
+        GameController.parseInput("a9 b5").failure.exception.getMessage should include("Invalid row number: 9. Expected 1-8.")
+      }
+
+      "return Failure for invalid destination column (a6 z5)" in {
+        // Z is not a valid column character (a-h)
+        GameController.parseInput("a6 z5").failure.exception shouldBe an [IllegalArgumentException]
+        GameController.parseInput("a6 z5").failure.exception.getMessage should include("Invalid column character: 'z'. Expected 'a'-'h")
+      }
+
+      "return Failure for invalid destination row (a6 bR) - Non-numeric" in {
+        // R is not a valid row number, triggers toIntOption failure
+        GameController.parseInput("a6 bR").failure.exception shouldBe an [IllegalArgumentException]
+        GameController.parseInput("a6 bR").failure.exception.getMessage should include("Invalid destination row input: 'r'. Expected a digit (1-8).")
+      }
+
+      "return Failure for out-of-bounds destination row (a6 b9)" in {
+        GameController.parseInput("a6 b9").failure.exception shouldBe an[IllegalArgumentException]
+        GameController.parseInput("a6 b9").failure.exception.getMessage should include("Invalid row number: 9. Expected 1-8.")
       }
     }
+  }
 
-    "validating player input" should {
 
-      "reject invalid move input format" in {
-        val board = Board.create()
-        val output = captureOutput("invalid input\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid input")
-      }
+  // --- GameState Unit Tests (100% Coverage on State Logic) ---
 
-      "reject input with wrong number of arguments" in {
-        val board = Board.create()
-        val output = captureOutput("b3\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid input")
-      }
+  "AwaitingInputState" should {
 
-      "reject out-of-bounds column" in {
-        val board = Board.create()
-        val output = captureOutput("z3 a4\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid input")
-      }
-
-      "reject out-of-bounds row" in {
-        val board = Board.create()
-        val output = captureOutput("a0 b1\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid input")
-      }
-
-      "reject when trying to move opponent's regular piece" in {
-        val board = Board.create()
-        // Try to move black piece (at row 0, col 1 = b1) when it's red's turn
-        val output = captureOutput("b1 a2\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("does not belong to you")
-      }
-
-      "reject when trying to move opponent's king piece from red turns" in {
-        val board = createEmptyBoard()
-        board(3)(3) = King(isRed = false) // Black king at d4
-        board(5)(5) = Regular(isRed = true) // Red piece at f6
-
-        val output = captureOutput("d4 e5\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("does not belong to you")
-      }
-
-      "reject when trying to move opponent's king piece from black turns" in {
-        val board = createEmptyBoard()
-        board(0)(0) = King(isRed = true) // Red king at h8
-        board(3)(3) = Regular(isRed = false) // Black piece at f6
-
-        val output = captureOutput("h8 g7\nq\n") {
-          GameController.gameLoop(board, isRedTurn = false)
-        }
-        output should include("does not belong to you")
-      }
-
-      "reject when selecting empty position" in {
-        val board = createEmptyBoard()
-        board(5)(5) = Regular(isRed = false)
-        board(5)(6) = Regular(isRed = true)
-
-        val output = captureOutput("b2 c3\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("No piece at that position")
-      }
-
-      "reject invalid move when valid moves exist" in {
-        val board = Board.create()
-        val output = captureOutput("a6 d4\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid move")
-      }
-
-      "reject non-jump move when jump is available" in {
-        val board = createEmptyBoard()
-        // Setup: Red piece at b6 can jump
-        board(5)(1) = Regular(isRed = true) // b6
-        board(4)(2) = Regular(isRed = false) // c5
-        // Position d4 (3,3) is empty, so jump is available
-
-        // Try to make a non-jump move instead with piece at d6
-        board(5)(3) = Regular(isRed = true) // d6
-
-        val output = captureOutput("d6 e5\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("must make a jump")
-      }
+    "transition to GameOverState when Red has no pieces" in {
+      // Red has 0 pieces
+      val board = Board().empty().addPiece(0, 7, Regular(isRed = false)).build()
+      val (nextState, _, _) = AwaitingInputState.process(GameController, board, isRedTurn = true)
+      nextState should be(GameOverState)
     }
 
-    "making valid moves" should {
-
-      "successfully execute a simple move for red" in {
-        val board = Board.create()
-        // Move red piece from b6 to c5 (row 5 col 1 to row 4 col 2)
-        val output = captureOutput("a6 b5\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include(AsciiEffect.BlackTurn.art)
-      }
-
-      "successfully execute a jump move" in {
-        val board = createEmptyBoard()
-        board(5)(1) = Regular(isRed = true) // b6
-        board(4)(2) = Regular(isRed = false) // c5
-
-        // Jump from b6 to d4
-        val output = captureOutput("b6 d4\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        // Should switch to black's turn after successful jump
-        output should include(AsciiEffect.BlackTurn.art)
-      }
-
-      "handle coordinate flipping for black's turn" in {
-        val board = Board.create()
-        // First move by red: b6 to c5, then black moves: b3 to a4
-        val output = captureOutput("b6 c5\nb3 a4\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        // Black should be able to make a move (coordinates get flipped)
-        output should include("RED (○)'s turn")
-      }
-
-      "reject opponent piece for black player (coordinate flipped)" in {
-        val board = createEmptyBoard()
-        board(2)(1) = Regular(isRed = false) // b3 (black)
-        board(5)(1) = Regular(isRed = true) // b6 (red)
-
-        // Black's turn, trying to move red piece
-        // Input "b3" from black's perspective becomes b6 after flip (red piece)
-        val output = captureOutput("b3 a4\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("does not belong to you")
-      }
-
-      "reject empty position for black player (coordinate flipped)" in {
-        val board = createEmptyBoard()
-        board(5)(5) = Regular(isRed = true)
-        board(2)(1) = Regular(isRed = false) // b3 (black)
-
-        // Black's turn, trying to select empty position
-        // Input "b7" for black will be flipped to b2 which is empty
-        val output = captureOutput("b7 c6\nq\n") {
-          GameController.gameLoop(board, isRedTurn = false)
-        }
-        output should include("No piece at that position")
-      }
+    "transition to GameOverState when Black has no pieces" in {
+      // Black has 0 pieces
+      val board = Board().empty().addPiece(7, 0, Regular(isRed = true)).build()
+      val (nextState, _, _) = AwaitingInputState.process(GameController, board, isRedTurn = false)
+      nextState should be(GameOverState)
     }
 
-    "parsing input" should {
+    "transition to InputHandlingState on normal execution" in {
+      val board = Board().withStandardSetup().build()
+      val (nextState, _, _) = AwaitingInputState.process(GameController, board, isRedTurn = true)
+      nextState should be(InputHandlingState)
+    }
+  }
 
-      "accept lowercase column letters" in {
-        val board = Board.create()
-        val output = captureOutput("b6 c5\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include(AsciiEffect.RedTurn.art)
-      }
+  "InputHandlingState" should {
+    val initialBoard = createSimpleBoard() // Red at e6, Black at d3
 
-      "handle mixed spacing in input" in {
-        val board = Board.create()
-        val output = captureOutput("b6  c5\nq\n") {
-          GameController.gameLoop(board, isRedTurn = false)
-        }
-        output should include(AsciiEffect.BlackTurn.art)
-      }
+    "transition to GameOverState on 'quit' or 'q' input" in {
+      val (nextStateQ, _, _) = processStep(InputHandlingState, initialBoard, true, "q\n")
+      nextStateQ should be(GameOverState)
 
-      "reject invalid column characters" in {
-        val board = Board.create()
-        val output = captureOutput("16 25\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid input")
-      }
+      val (nextStateQuit, _, _) = processStep(InputHandlingState, initialBoard, true, "quit\n")
+      nextStateQuit should be(GameOverState)
+    }
 
-      "reject incomplete position format" in {
-        val board = Board.create()
-        val output = captureOutput("b c5\nq\n") {
-          GameController.gameLoop(board, isRedTurn = true)
-        }
-        output should include("Invalid input")
-      }
+    "transition to AwaitingInputState and undo on 'undo' input" in {
+      // 1. Setup: Make a move and push to history
+      val moveCommand = de.htwg.model.command.MoveCommand(initialBoard, Input(5, 4, 4, 5), true)
+      val (movedBoard, success) = moveCommand.execute()
+      success should be(true)
+      CommandHistory.push(moveCommand)
+
+      // 2. Undo
+      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, movedBoard, false, "undo\n")
+
+      // Should revert board and flip turn
+      nextState should be(AwaitingInputState)
+      newBoard should be(initialBoard)
+      nextTurn should be(true) // Turn flips back to Red
+    }
+
+    "stay in AwaitingInputState on failed 'undo' (empty history)" in {
+      CommandHistory.clear()
+      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, initialBoard, true, "undo\n")
+
+      // Should stay in same turn/board
+      nextState should be(AwaitingInputState)
+      newBoard should be(initialBoard)
+      nextTurn should be(true)
+    }
+
+    "transition to AwaitingInputState and redo on 'redo' input" in {
+      // 1. Setup: Push and then immediately undo a move to prime the redo stack
+      val moveCommand = de.htwg.model.command.MoveCommand(initialBoard, Input(5, 4, 4, 5), true)
+      val (movedBoard, _) = moveCommand.execute()
+      CommandHistory.push(moveCommand)
+      CommandHistory.undo(movedBoard)
+
+      // 2. Redo (Note: current board is 'initialBoard', current turn is 'false' after undo)
+      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, initialBoard, false, "redo\n")
+
+      // Should apply redo and flip turn
+      nextState should be(AwaitingInputState)
+      newBoard should be(movedBoard)
+      nextTurn should be(true) // Turn flips back to Red
+    }
+
+    "stay in AwaitingInputState on failed 'redo' (empty redo stack)" in {
+      CommandHistory.clear()
+      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, initialBoard, true, "redo\n")
+
+      // Should stay in same turn/board
+      nextState should be(AwaitingInputState)
+      newBoard should be(initialBoard)
+      nextTurn should be(true)
+    }
+
+    "transition to MoveExecutionState on valid input" in {
+      // Valid input for Red: e6 f5
+      val (nextState, _, _) = processStep(InputHandlingState, initialBoard, true, "e6 f5\n")
+      nextState should be(MoveExecutionState(Input(5, 4, 4, 5)))
+    }
+
+    "transition to AwaitingInputState on invalid move input" in {
+      // Invalid input format
+      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, initialBoard, true, "bad_format\n")
+      nextState should be(AwaitingInputState)
+      newBoard should be(initialBoard)
+      nextTurn should be(true)
+    }
+  }
+
+  "MoveExecutionState" should {
+    val initialBoard = Board().withStandardSetup().build()
+
+    // --- Success Paths ---
+
+    "successfully execute a simple move and switch turn" in {
+      // Red move: a6 to b5 (R5, C0 -> R4, C1)
+      val executionState = MoveExecutionState(Input(5, 0, 4, 1))
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = true)
+
+      nextState should be(AwaitingInputState)
+      nextTurn should be(false) // Switched to Black's turn
+      newBoard(5)(0) should be(Empty)
+      newBoard(4)(1) should be(Regular(true))
+    }
+
+    "successfully execute a simple move with coordinate flipping for Black" in {
+      // Black move: c3 to b4. Unflipped input is (R2, C2 -> R3, C1)
+      val executionState = MoveExecutionState(Input(5, 2, 4, 3))
+
+      print(ConsoleView.boardString(initialBoard, false))
+      // Flipped coordinates used for logic: (7-2, 7-2) -> (7-3, 7-1) i.e. (R5, C5) -> (R4, C6)
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = false)
+
+      print(ConsoleView.boardString(newBoard, true))
+      nextState should be(AwaitingInputState)
+      nextTurn should be(true) // Switched to Red's turn
+      newBoard(2)(5) should be(Empty)
+      newBoard(3)(4) should be(Regular(false))
+    }
+
+    "successfully execute a jump move, push to history, and switch turn" in {
+      // Setup: Red piece at b6 (R5, C1), Black piece at c5 (R4, C2)
+      val board = Board().empty().addPiece(5, 1, Regular(true)).addPiece(4, 2, Regular(false)).build()
+      val executionState = MoveExecutionState(Input(5, 1, 3, 3)) // b6 to d4
+
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, board, isRedTurn = true)
+
+      nextState should be(AwaitingInputState)
+      nextTurn should be(false) // Switched to Black's turn
+      newBoard(5)(1) should be(Empty) // Old piece gone
+      newBoard(4)(2) should be(Empty) // Jumped piece gone
+      newBoard(3)(3) should be(Regular(true)) // New piece there
+    }
+
+    // --- Failure Paths (Returning to AwaitingInputState) ---
+
+    "fail if attempting to move opponent's regular piece (Red turn)" in {
+      // Red tries to move Black piece at b1 (R0, C1)
+      val executionState = MoveExecutionState(Input(0, 1, 1, 2))
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = true)
+
+      nextState should be(AwaitingInputState)
+      nextTurn should be(true) // Turn remains Red
+      newBoard should be(initialBoard)
+    }
+
+    "fail if attempting to move opponent's King piece (Black turn)" in {
+      // Setup: Red King at a8 (R0, C0), Black's turn
+      val board = Board().empty().addPiece(0, 0, King(true)).addPiece(3, 3, Regular(false)).build()
+      // Black tries to move Red King (h8 in flipped coords -> R0, C0 unflipped)
+      val executionState = MoveExecutionState(Input(7, 7, 6, 6))
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, board, isRedTurn = false)
+
+      nextState should be(AwaitingInputState)
+      nextTurn should be(false) // Turn remains Black
+      newBoard should be(board)
+    }
+
+    "fail if selecting an empty position" in {
+      // Try to move from e5 (R4, C4), which is empty on standard board
+      val executionState = MoveExecutionState(Input(4, 4, 3, 3))
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = true)
+
+      nextState should be(AwaitingInputState)
+      newBoard should be(initialBoard)
+      nextTurn should be(true)
+    }
+
+    "fail if attempting a non-jump move when a jump is required" in {
+      // Setup: Red at b6 (R5, C1), Black at c5 (R4, C2) - Jump available
+      val board = Board().empty().addPiece(5, 1, Regular(true)).addPiece(4, 2, Regular(false)).build()
+      // Invalid move: b6 to a5 (non-jump when jump is mandatory)
+      val executionState = MoveExecutionState(Input(5, 1, 4, 0))
+
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, board, isRedTurn = true)
+
+      nextState should be(AwaitingInputState)
+      newBoard should be(board)
+      nextTurn should be(true)
+    }
+
+    "fail if attempting an invalid move (e.g., diagonal backwards for regular piece)" in {
+      // Red at a6 (R5, C0). Try to move a6 to b7 (backwards)
+      val executionState = MoveExecutionState(Input(5, 0, 6, 1))
+
+      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = true)
+
+      nextState should be(AwaitingInputState)
+      newBoard should be(initialBoard)
+      nextTurn should be(true)
+    }
+  }
+
+  "GameOverState" should {
+    "remain in GameOverState" in {
+      val board = Board().empty().build()
+      val (nextState, newBoard, nextTurn) = GameOverState.process(GameController, board, isRedTurn = true)
+
+      nextState should be(GameOverState)
+      newBoard should be(board)
+      nextTurn should be(true)
     }
   }
 }

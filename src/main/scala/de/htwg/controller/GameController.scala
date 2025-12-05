@@ -1,162 +1,139 @@
 package de.htwg.controller
 
+import de.htwg.model.*
+import de.htwg.model.Board.*
+import de.htwg.util.Observable
+import de.htwg.view.tui.ConsoleView
+
 import scala.io.StdIn.readLine
-import de.htwg.model._
-import de.htwg.model.Board._
-import GameLogic._
-import de.htwg.view.ConsoleView
+import scala.util.{Failure, Success, Try}
 
-import scala.annotation.tailrec
-
-object GameController {
+/**
+ * GameController acts as the central state manager and event publisher (Subject).
+ * It contains only game logic and publishes abstract GameEvents.
+ * It is completely freed from all string literals and console I/O, except for readLine().
+ */
+object GameController extends Observable[GameEvent] {
 
   // Convert column letter (a-h) to index (0-7)
-  private def columnToIndex(col: Char): Option[Int] = {
-    val index = col - 'a'
-    if (index >= 0 && index < 8) Some(index) else None
+  /**
+   * Converts a column character ('a'-'h') to a 0-based index (0-7).
+   * Returns Failure if the character is out of range.
+   *
+   * @param col The column character (e.g., 'a', 'h').
+   * @return Success(index) or Failure(IllegalArgumentException).
+   */
+  def columnToIndex(col: Char): Try[Int] = {
+    // Ensure case-insensitivity by converting to lower case
+    val lowerCol = col.toLower
+    val index = lowerCol - 'a'
+
+    if (index >= 0 && index < 8) {
+      Success(index)
+    } else {
+      Failure(new IllegalArgumentException(s"Invalid column character: '$col'. Expected 'a'-'h'."))
+    }
   }
 
-  // Convert row number (1-8) to index (0-7)
-  private def rowToIndex(row: Int): Option[Int] = {
+  /**
+   * Converts a row number (1-8) to a 0-based index (0-7).
+   * Returns Failure if the number is out of range.
+   *
+   * @param row The row number (e.g., 1, 8).
+   * @return Success(index) or Failure(IllegalArgumentException).
+   */
+  def rowToIndex(row: Int): Try[Int] = {
     val index = row - 1
-    if (index >= 0 && index < 8) Some(index) else None
+
+    if (index >= 0 && index < 8) {
+      Success(index)
+    } else {
+      Failure(new IllegalArgumentException(s"Invalid row number: $row. Expected 1-8."))
+    }
   }
 
-  // Parse input in format: "colRow colRow" (e.g., "b3 c4")
-  private def parseInput(input: String): Option[(Int, Int, Int, Int)] = {
-    val parts = input.split("\\s+")
-    if (parts.length != 2) return None
+  /**
+   * Helper function to safely parse a row string into an Int.
+   */
+  private def parseRowString(rowStr: String, pos: String): Try[Int] = {
+    Try(rowStr.toInt).recoverWith {
+      case _: NumberFormatException =>
+        Failure(new IllegalArgumentException(s"Invalid $pos row input: '$rowStr'. Expected a digit (1-8)."))
+    }
+  }
 
-    val positions = parts.flatMap { part =>
-      if (part.length < 2) None
-      else {
-        val col = part.charAt(0)
-        val rowStr = part.substring(1)
-        for {
-          colIdx <- columnToIndex(col)
-          rowNum <- rowStr.toIntOption
-          rowIdx <- rowToIndex(rowNum)
-        } yield (rowIdx, colIdx)
-      }
+  /**
+   * Parses a chess move string (e.g., "A1 B2") into an Input case class.
+   * Uses a for-comprehension over Try to sequence coordinate validation and parsing.
+   *
+   * @param input The raw input string.
+   * @return Success(Input) with 0-based indices or Failure(IllegalArgumentException).
+   */
+  def parseInput(input: String): Try[Input] = {
+    // 1. Basic format validation
+    val parts = input.trim.toLowerCase.split("\\s+")
+    if (parts.length != 2) {
+      return Failure(new IllegalArgumentException("Invalid format. Expected format: 'A1 B2' (source destination)."))
     }
 
-    if (positions.length == 2) {
-      val (fromR, fromC) = positions(0)
-      val (toR, toC) = positions(1)
-      Some((fromR, fromC, toR, toC))
-    } else None
+    // 2. Extract parts
+    val srcStr = parts(0)
+    val destStr = parts(1)
+
+    if (srcStr.length < 2 || destStr.length < 2) {
+      return Failure(new IllegalArgumentException("Coordinates must contain a column and a row (e.g., A1)."))
+    }
+
+    // 3. Sequential validation using a Try for-comprehension
+    for {
+      // Source Parsing
+      srcColChar <- Try(srcStr.charAt(0))
+      srcColIdx <- columnToIndex(srcColChar)
+      srcRowStr = srcStr.substring(1)
+      srcRowInt <- parseRowString(srcRowStr, "source")
+      srcRowIdx <- rowToIndex(srcRowInt)
+
+      // Destination Parsing
+      destColChar <- Try(destStr.charAt(0))
+      destColIdx <- columnToIndex(destColChar)
+      destRowStr = destStr.substring(1)
+      destRowInt <- parseRowString(destRowStr, "destination")
+      destRowIdx <- rowToIndex(destRowInt)
+
+    } yield Input(srcRowIdx, srcColIdx, destRowIdx, destColIdx)
   }
 
-  /** Clear the terminal screen (controller handles side-effects). */
-  private def clearScreen(): Unit = print("\u001b[2J\u001b[H")
+  // --- State Management ---
+  private var currentState: GameState = AwaitingInputState
+
+  // (columnToIndex, rowToIndex, and parseInput remain UNCHANGED)
 
   def startGame(): Unit = {
-    clearScreen()
-    println("=" * 50)
-    println("          WELCOME TO CHECKERS")
-    println("=" * 50)
-    println("\nRules:")
-    println("- Regular pieces move diagonally forward")
-    println("- Kings move diagonally in any direction")
-    println("- You must jump when available")
-    println("- Reach the opposite end to become a King")
-    println("\nPress Enter to start...")
-    readLine()
+    this.add(ConsoleView)
 
-    val board = Board.create()
-    gameLoop(board, isRedTurn = true)
+    notifyObservers(StartGame())
+
+    notifyObservers(RequestInput(isRedTurn = true))
+    readLine() // Blocking input for "Press Enter"
+
+    // --- State Machine Execution Loop ---
+    var currentBoard: Board = Board().withStandardSetup().build()
+    var isRedTurn: Boolean = true
+
+    // Start the state machine iteration
+    currentState = AwaitingInputState
+
+    while (currentState != GameOverState) {
+      // The current state processes the request (input, execution, etc.)
+      // and returns the NEXT state, the new board, and whose turn it is.
+      val (nextState, newBoard, nextTurn) = currentState.process(this, currentBoard, isRedTurn)
+
+      // Update the context variables for the next iteration
+      currentState = nextState
+      currentBoard = newBoard
+      isRedTurn = nextTurn
+    }
+    // Loop ends when currentState is GameOverState
   }
 
-  @tailrec
-  def gameLoop(board: Board, isRedTurn: Boolean, showTurn: Boolean = true): Unit = {
-    if (showTurn) {
-      clearScreen()
-      // Print turn announcement, wait, then clear again (controller responsible for timing/clearing)
-      println(ConsoleView.turnAnnouncementString(isRedTurn))
-      Thread.sleep(500)
-      clearScreen()
-    }
-
-    // Print the board (controller prints the string returned by the pure view)
-    println(ConsoleView.boardString(board, isRedTurn))
-
-    val (red, black) = countPieces(board)
-    if (red == 0) {
-      clearScreen()
-      println(ConsoleView.winnerString(isRed = false))
-      return
-    }
-    if (black == 0) {
-      clearScreen()
-      println(ConsoleView.winnerString(isRed = true))
-      return
-    }
-
-    println(s"\n${if (isRedTurn) "RED (○)" else "BLACK (●)"}'s turn (Red: $red, Black: $black)")
-    print("Enter move (e.g., 'b3 c4') or 'quit'/'q': ")
-
-    readLine().trim.toLowerCase match {
-      case "quit" | "q" => println("Thanks for playing!")
-      case input =>
-        parseInput(input) match {
-          case None =>
-            println("❌ Invalid input. Use format: colRow colRow (e.g., b3 c4)")
-            Thread.sleep(800)
-            gameLoop(board, isRedTurn, false)
-
-          case Some((fromRow, fromCol, toRow, toCol)) =>
-            // Flip coordinates if it's black's turn (board was displayed mirrored earlier)
-            val (fromR, fromC, toR, toC) =
-              if (isRedTurn) (fromRow, fromCol, toRow, toCol)
-              else (7 - fromRow, 7 - fromCol, 7 - toRow, 7 - toCol)
-
-            // Check if the player is selecting their own piece
-            board(fromR)(fromC) match {
-              case Regular(red) if red != isRedTurn =>
-                println("❌ That piece does not belong to you!")
-                Thread.sleep(800)
-                return gameLoop(board, isRedTurn, false)
-
-              case King(red) if red != isRedTurn =>
-                println("❌ That piece does not belong to you!")
-                Thread.sleep(800)
-                return gameLoop(board, isRedTurn, false)
-
-              case Empty =>
-                println("❌ No piece at that position.")
-                Thread.sleep(800)
-                return gameLoop(board, isRedTurn, false)
-
-              case _ =>
-            }
-
-            val moves = getValidMoves(board, fromR, fromC)
-            val hasJumps = hasJumpsAvailable(board, isRedTurn)
-            val move = moves.find { case (r, c, _) => r == toR && c == toC }
-
-            move match {
-              case Some((r, c, isJump)) if !hasJumps || isJump =>
-                val newBoard = makeMove(board, fromR, fromC, toR, toC)
-                if (isJump) {
-                  // controller prints the kill effect returned by view and manages timing/clearing
-                  clearScreen()
-                  println(ConsoleView.killEffectString(1))
-                  Thread.sleep(2000)
-                  clearScreen()
-                }
-                gameLoop(newBoard, !isRedTurn, true)
-
-              case Some(_) =>
-                println("❌ You must make a jump when available!")
-                Thread.sleep(800)
-                gameLoop(board, isRedTurn, false)
-
-              case None =>
-                println("❌ Invalid move.")
-                Thread.sleep(800)
-                gameLoop(board, isRedTurn, false)
-            }
-        }
-    }
-  }
 }
