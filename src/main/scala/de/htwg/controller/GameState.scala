@@ -6,6 +6,7 @@ import de.htwg.model.GameLogic.*
 import de.htwg.model.command.{CommandHistory, MoveCommand}
 
 import scala.io.StdIn.readLine
+import scala.util.{Failure, Success}
 
 // --- State Interface ---
 sealed trait GameState {
@@ -70,31 +71,29 @@ case object InputHandlingState extends GameState {
             (AwaitingInputState, board, isRedTurn) // Stay with same board/turn
         }
 
-      case _ =>
-        // (Existing logic for parsing move input...)
-        controller.parseInput(input) match {
-          case None =>
-            controller.notifyObservers(InvalidInput())
-            Thread.sleep(800)
-            (AwaitingInputState, board, isRedTurn)
+      case moveInput =>
+        controller.parseInput(moveInput) match {
 
-          case Some((fromRow, fromCol, toRow, toCol)) =>
-            // Transition to execution state
-            (MoveExecutionState(fromRow, fromCol, toRow, toCol), board, isRedTurn)
+          case Success(input) =>
+            (MoveExecutionState(input), board, isRedTurn)
+
+          case Failure(e) =>
+            controller.notifyObservers(InvalidInput(e.getMessage))
+            (AwaitingInputState, board, isRedTurn)
         }
     }
   }
 }
-case class MoveExecutionState(fromRow: Int, fromCol: Int, toRow: Int, toCol: Int) extends GameState {
+case class MoveExecutionState(input: Input) extends GameState {
   override def process(controller: GameController.type, currentBoard: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
 
     // 1. Coordinate Flipping
-    val (fromR, fromC, toR, toC) =
-      if (isRedTurn) (fromRow, fromCol, toRow, toCol)
-      else (7 - fromRow, 7 - fromCol, 7 - toRow, 7 - toCol)
+    val (srcR, srcC, destR, destC) =
+      if (isRedTurn) (input.srcRow, input.srcCol, input.destRow, input.destCol)
+      else (7 - input.srcRow, 7 - input.srcCol, 7 - input.destRow, 7 - input.destCol)
 
     // 2. Piece Ownership/Empty Check (Simplified from original due to return constraints)
-    currentBoard(fromR)(fromC) match {
+    currentBoard(srcR)(srcC) match {
       case Regular(isRed) if isRed != isRedTurn =>
         controller.notifyObservers(MoveFailed("Not your piece."))
         Thread.sleep(800)
@@ -113,7 +112,7 @@ case class MoveExecutionState(fromRow: Int, fromCol: Int, toRow: Int, toCol: Int
       case _ =>
     }
 
-    val command = MoveCommand(currentBoard, fromR, fromC, toR, toC, isRedTurn)
+    val command = MoveCommand(currentBoard, Input(srcR, srcC, destR, destC), isRedTurn)
     val (newBoard, success) = command.execute()
 
     if (success) {

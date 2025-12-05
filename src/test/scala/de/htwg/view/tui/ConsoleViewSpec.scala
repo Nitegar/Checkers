@@ -21,11 +21,8 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
     outStream.toString.trim
   }
 
-  // Create a minimal board state for scoring tests
   private val testBoard = {
-    val b = Board.create()
-    // Ensure scores are known for RequestInput test
-    b(0)(1) = Empty
+    val b = Board().withStandardSetup().addPiece(0, 1, Empty).build()
     b
   }
 
@@ -67,7 +64,7 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
 
     "printing the board" should {
       "display board with correct structure and all row/column numbers/letters" in {
-        val board = Board.create()
+        val board = Board().withStandardSetup().build()
         val output = ConsoleView.boardString(board, isRedTurn = true)
 
         for (i <- 0 until 8) {
@@ -79,12 +76,22 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
       }
 
       "show pieces with correct symbols and flip board for black's turn" in {
-        val board = Board.create()
+        val board = Board().withStandardSetup().build()
         val redOutput = ConsoleView.boardString(board, isRedTurn = true)
         val blackOutput = ConsoleView.boardString(board, isRedTurn = false)
 
         redOutput should (include("○") and include("●"))
         redOutput should not equal blackOutput
+      }
+
+      "show king pieces with correct symbols and flip board for black's turn" in {
+        val board = Board().withStandardSetup()
+          .addPiece(4, 4, King(true))
+          .addPiece(3, 3, King(false)).build()
+
+        val redOutput = ConsoleView.boardString(board, isRedTurn = true)
+
+        redOutput should (include("◎") and include("◉"))
       }
     }
 
@@ -98,7 +105,7 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
         output should include(AsciiEffect.BlackWins.art)
       }
     }
-    
+
     "receiving GameEvents via update" should {
 
       "handle StartGame event by printing the welcome message" in {
@@ -128,8 +135,8 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
         output should include(AsciiEffect.SingleKill.art)
       }
 
-      "handle RequestInput during initial setup (scores 0,0)" in {
-        ConsoleView.update(BoardUpdated(Board.create(), true))
+      "handle RequestInput during initial setup (scores 0,0) for red" in {
+        ConsoleView.update(BoardUpdated(Board().withStandardSetup().build(), true))
 
         // Test the main game prompt (since BoardUpdated is usually called first in the loop)
         val output = captureOutput { ConsoleView.update(RequestInput(isRedTurn = true)) }
@@ -137,9 +144,21 @@ class ConsoleViewSpec extends AnyWordSpec with Matchers {
         output should include("Enter move")
       }
 
+      "handle RequestInput during initial setup (scores 0,0) for black" in {
+        ConsoleView.update(BoardUpdated(Board().withStandardSetup().build(), true))
+
+        // Test the main game prompt (since BoardUpdated is usually called first in the loop)
+        val output = captureOutput {
+          ConsoleView.update(RequestInput(isRedTurn = false))
+        }
+        output should include("BLACK (●)'s turn")
+        output should include("Enter move")
+      }
+
       "map InvalidInput('Invalid format.') to a user-friendly error" in {
-        val output = captureOutput { ConsoleView.update(InvalidInput()) }
-        output should include("❌ Invalid input. Use format: colRow colRow")
+        val errorMessage = "❌ Invalid input. Use format: colRow colRow"
+        val output = captureOutput { ConsoleView.update(InvalidInput(errorMessage)) }
+        output should include(errorMessage)
       }
 
       "map MoveFailed('Not your piece.') to a user-friendly error" in {

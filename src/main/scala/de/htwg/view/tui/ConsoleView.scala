@@ -62,8 +62,8 @@ object ConsoleView extends Observer[GameEvent] {
         print(s"\n${player}'s turn (Red: ${redCount}, Black: ${blackCount})\nEnter move (e.g., 'b3 c4') or 'quit'/'q': ")
       }
 
-    case InvalidInput() =>
-      println("❌ Invalid input. Use format: colRow colRow (e.g., b3 c4)")
+    case InvalidInput(message) =>
+      println(message)
 
     case MoveFailed(abstractReason) =>
       abstractReason match {

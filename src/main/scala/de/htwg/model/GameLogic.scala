@@ -9,30 +9,36 @@ import scala.annotation.tailrec
 object GameLogic {
 
   def makeMove(board: Board, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int): (Board, Int) = {
-    val newBoard = board.map(_.clone())
-    val piece = newBoard(fromRow)(fromCol)
+    val piece = board(fromRow)(fromCol)
 
-    // 1. Promote to King if necessary
-    newBoard(toRow)(toCol) = piece match {
+    // 1. Determine the piece to place at the destination (checking for king promotion)
+    val destinationPiece = piece match {
       case Regular(true) if toRow == 0 => King(true)
       case Regular(false) if toRow == 7 => King(false)
       case p => p
     }
-    newBoard(fromRow)(fromCol) = Empty
+
+    // Helper function for immutable cell update: returns a new Board with the cell (r, c) updated.
+    val update = (b: Board, r: Int, c: Int, p: Piece) =>
+      b.updated(r, b(r).updated(c, p))
+
+    val boardAfterDestination = update(board, toRow, toCol, destinationPiece)
+
+    val boardAfterSourceClear = update(boardAfterDestination, fromRow, fromCol, Empty)
 
     val isJump = math.abs(toRow - fromRow) == 2
-    var kills = 0
 
     if (isJump) {
       val midRow = (fromRow + toRow) / 2
       val midCol = (fromCol + toCol) / 2
-      newBoard(midRow)(midCol) = Empty
-      kills = 1 // One kill for a standard jump
+
+      val finalBoard = update(boardAfterSourceClear, midRow, midCol, Empty)
+      val kills = 1
+      (finalBoard, kills)
+    } else {
+      (boardAfterSourceClear, 0)
     }
-
-    (newBoard, kills)
   }
-
   // --- NEW: Recursive Jump Chain Function ---
 
   /**
@@ -53,7 +59,6 @@ object GameLogic {
     val (isRed, isRegular) = piece match {
       case Regular(r) => (r, true)
       case King(r) => (r, false)
-      case _ => return (board, totalKills) // Should not happen if called correctly
     }
 
     // Get all available jumps for the piece at its new location

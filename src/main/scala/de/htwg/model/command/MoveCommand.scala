@@ -5,10 +5,7 @@ import de.htwg.model.*
 
 case class MoveCommand(
                         initialBoard: Board,
-                        fromRow: Int,
-                        fromCol: Int,
-                        toRow: Int,
-                        toCol: Int,
+                        input: Input,
                         isRedTurn: Boolean
                       ) extends Command {
   private var boardAfter: Board = initialBoard
@@ -21,20 +18,20 @@ case class MoveCommand(
    * @return A tuple of (New Board state, Success/Failure flag).
    */
   def execute(): (Board, Boolean) = {
-    val piece = initialBoard(fromRow)(fromCol)
+    val piece = initialBoard(input.srcRow)(input.srcCol)
 
     // Check if the move is valid and required jumps are handled (using GameLogic.getValidMoves)
-    val availableMoves = GameLogic.getValidMoves(initialBoard, fromRow, fromCol)
+    val availableMoves = GameLogic.getValidMoves(initialBoard, input.srcRow, input.srcCol)
     val validDestinations = availableMoves.map(m => (m._1, m._2))
 
-    if (!validDestinations.contains((toRow, toCol))) {
+    if (!validDestinations.contains((input.destRow, input.destCol))) {
       // Move is invalid (not in valid list)
       return (initialBoard, false)
     }
 
     // Check if a jump was available but a non-jump move was made
     val hasJumpsAvailable = GameLogic.hasJumpsAvailable(initialBoard, isRedTurn)
-    val attemptedMoveIsJump = math.abs(toRow - fromRow) == 2
+    val attemptedMoveIsJump = math.abs(input.destRow - input.srcRow) == 2
 
     if (hasJumpsAvailable && !attemptedMoveIsJump) {
       // Failed: Must jump
@@ -42,14 +39,14 @@ case class MoveCommand(
     }
 
     // 1. Execute the single move
-    val (boardAfterFirstMove, kills) = GameLogic.makeMove(initialBoard, fromRow, fromCol, toRow, toCol)
+    val (boardAfterFirstMove, kills) = GameLogic.makeMove(initialBoard, input.srcRow, input.srcCol, input.destRow, input.destCol)
 
     wasJump = attemptedMoveIsJump
     killCount = kills
 
     val finalBoard: Board = if (wasJump) {
       // 2. If it was a jump, check for a chain reaction
-      val (boardAfterChain, totalKills) = GameLogic.findJumpChain(boardAfterFirstMove, toRow, toCol, kills)
+      val (boardAfterChain, totalKills) = GameLogic.findJumpChain(boardAfterFirstMove, input.destRow, input.destCol, kills)
       killCount = totalKills // Update the total kill count
       boardAfterChain
     } else {
