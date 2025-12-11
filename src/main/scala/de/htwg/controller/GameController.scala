@@ -3,16 +3,18 @@ package de.htwg.controller
 import de.htwg.model.*
 import de.htwg.model.Board.*
 import de.htwg.util.Observable
-
-import scala.concurrent.Await
-import scala.concurrent.duration.*
+import scala.concurrent.{ExecutionContext, Future} // NEW: Future and ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-/**
- * GameController acts as the central state manager and event publisher (Subject).
- * Modified to support both TUI and GUI through InputHandler abstraction.
- */
+// --- REQUIRED FOR ASYNCHRONOUS EXECUTION ---
 object GameController extends Observable[GameEvent] {
+  implicit val executionContext: ExecutionContext = ExecutionContext.global
+
+  // State variables are now object members to be updated by runGameLoop
+  private var currentState: GameState = AwaitingInputState
+  private var currentBoard: Board = Board().withStandardSetup().build()
+  private var isRedTurn: Boolean = true
+  private var inputHandler: InputHandler = TuiInputHandler
 
   // Convert column letter (a-h) to index (0-7)
   def columnToIndex(col: Char): Try[Int] = {
@@ -72,36 +74,71 @@ object GameController extends Observable[GameEvent] {
     } yield Input(srcRowIdx, srcColIdx, destRowIdx, destColIdx)
   }
 
-  // --- State Management ---
-  private var currentState: GameState = AwaitingInputState
-  private var inputHandler: InputHandler = TuiInputHandler // Default to console
+
 
   def setInputHandler(handler: InputHandler): Unit = {
     inputHandler = handler
   }
-
+  // --- ASYNCHRONOUS START GAME (REMOVED ALL BLOCKING CODE) ---
   def startGame(): Unit = {
     notifyObservers(StartGame())
 
-    notifyObservers(RequestInput(isRedTurn = true))
-
-//     Wait for initial "start" input
-    val startFuture = inputHandler.requestInput()
-    Await.result(startFuture, Duration.Inf)
-
-    // --- State Machine Execution Loop ---
-    var currentBoard: Board = Board().withStandardSetup().build()
-    var isRedTurn: Boolean = true
-
-    // Start the state machine iteration
+    // 1. Initialize State and Board
+    currentBoard = Board().withStandardSetup().build()
+    isRedTurn = true
     currentState = AwaitingInputState
 
-    while (currentState != GameOverState) {
-      val (nextState, newBoard, nextTurn) = currentState.process(this, currentBoard, isRedTurn, inputHandler)
+    // 2. Start the non-blocking game loop immediately.
+    runGameLoop(currentState, currentBoard, isRedTurn)
+  }
 
-      currentState = nextState
-      currentBoard = newBoard
-      isRedTurn = nextTurn
+  // --- ASYNCHRONOUS GAME LOOP (Recursive Future Chain) ---
+  private def runGameLoop(state: GameState, board: Board, redTurn: Boolean): Unit = {
+    // Update the state variables
+    currentState = state
+    currentBoard = board
+    isRedTurn = redTurn
+
+    // Phase 1: Preparation/Announcement (Uses the new processPreparation)
+    val (stateAfterPrep, boardAfterPrep, turnAfterPrep) = state match {
+      case AwaitingInputState =>
+        AwaitingInputState.processPreparation(this, board, redTurn)
+      case _ => (state, board, redTurn)
+    }
+
+    stateAfterPrep match {
+      case GameOverState =>
+        return
+
+      case InputHandlingState =>
+        notifyObservers(RequestInput(turnAfterPrep))
+
+        // This is the only place we request input. The resulting Future determines when to continue.
+        inputHandler.requestInput().onComplete {
+          case Success(input) =>
+            // Phase 2: Process the input (using the new processInput)
+            val (nextState, nextBoard, nextTurn) =
+              InputHandlingState.processInput(this, boardAfterPrep, turnAfterPrep, input)
+
+            // Phase 3: Execute the move (using the new processExecution)
+            val (finalState, finalBoard, finalTurn) = nextState match {
+              case MoveExecutionState(parsedInput) =>
+                MoveExecutionState(parsedInput).processExecution(this, nextBoard, nextTurn)
+              case _ => (nextState, nextBoard, nextTurn)
+            }
+
+            // Phase 4: Recurse for the next turn
+            if (finalState != GameOverState) {
+              runGameLoop(finalState, finalBoard, finalTurn)
+            }
+
+          case Failure(e) =>
+            notifyObservers(InvalidInput(s"Input handler error: ${e.getMessage}"))
+            runGameLoop(AwaitingInputState, boardAfterPrep, turnAfterPrep)
+        }
+
+      case _ =>
+        runGameLoop(AwaitingInputState, boardAfterPrep, turnAfterPrep)
     }
   }
 }

@@ -42,6 +42,13 @@ object GuiView extends Observer[GameEvent] {
 
   private val frame = new MainFrame {
     title = "Checkers Game"
+
+    listenTo(this)
+    reactions += {
+      case UIElementResized(_) =>
+        boardPanel.revalidate()
+        boardPanel.repaint()
+    }
     contents = new BorderPanel {
       layout(new BoxPanel(Orientation.Vertical) {
         contents += statusLabel
@@ -246,29 +253,46 @@ object GuiView extends Observer[GameEvent] {
   }
 
   // --- FIX 1: Remove all rotation logic from click handling ---
+  // --- In GuiView.scala (Modified handleBoardClick) ---
+
+  // This method must be synchronous and fast, running on the EDT
   private def handleBoardClick(x: Int, y: Int): Unit = {
     currentBoard.foreach { board =>
-      val cellSize = boardPanel.size.width / 8
-      val internalCol = x / cellSize // Internal Col = Display Col
-      val internalRow = y / cellSize // Internal Row = Display Row
 
-      if (internalRow >= 0 && internalRow < 8 && internalCol >= 0 && internalCol < 8) {
+      // 1. Get the actual, current size of the *square* board area.
+      // This MUST match the calculation used in paintComponent.
+      val boardSize = math.min(boardPanel.size.width, boardPanel.size.height)
 
-        selectedPiece match {
-          case Some((selRow, selCol)) =>
-            if (validMoves.exists { case (r, c, _) => r == internalRow && c == internalCol }) {
-              executeMove(selRow, selCol, internalRow, internalCol)
-            } else {
+      // 2. Calculate the correct, current cell size.
+      val cellSize = boardSize / 8
+
+      // 3. Since the board is centered, we might need to adjust coordinates
+      //    if the click is in the empty margins.
+      //    If the click is outside the boardSize x boardSize area, ignore it.
+      if (x >= 0 && x < boardSize && y >= 0 && y < boardSize) {
+
+        // 4. Calculate coordinates using the new cellSize.
+        val internalCol = x / cellSize
+        val internalRow = y / cellSize
+
+        if (internalRow >= 0 && internalRow < 8 && internalCol >= 0 && internalCol < 8) {
+
+          selectedPiece match {
+            case Some((selRow, selCol)) =>
+              if (validMoves.exists { case (r, c, _) => r == internalRow && c == internalCol }) {
+                executeMove(selRow, selCol, internalRow, internalCol)
+              } else {
+                trySelectPiece(board, internalRow, internalCol)
+              }
+
+            case None =>
               trySelectPiece(board, internalRow, internalCol)
-            }
-
-          case None =>
-            trySelectPiece(board, internalRow, internalCol)
+          }
         }
       }
     }
   }
-
+  
   private def trySelectPiece(board: Board, row: Int, col: Int): Unit = {
     Swing.onEDT {
       board(row)(col) match {
@@ -335,12 +359,29 @@ object GuiView extends Observer[GameEvent] {
   private class BoardPanel extends Panel {
     preferredSize = new Dimension(600, 600)
 
+    override def preferredSize: Dimension = {
+      // If the frame has not been packed/shown yet, return a default minimum.
+      if (frame.contents.head.size.width == 0) new Dimension(600, 600)
+      else {
+        // Get the current available width and height for the central panel
+        val containerWidth = frame.contents.head.size.width
+        val containerHeight = frame.contents.head.size.height - statusLabel.preferredSize.height -
+          scoreLabel.preferredSize.height - 40 // ~40 accounts for padding/gaps/buttons
+
+        // The board size is the minimum of the available width and height
+        val size = math.min(containerWidth, containerHeight)
+        new Dimension(size, size)
+      }
+    }
+
     override def paintComponent(g: Graphics2D): Unit = {
+      val boardSize = math.min(size.width, size.height)
+      val cellSize = boardSize / 8
+
       super.paintComponent(g)
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
       currentBoard.foreach { board =>
-        val cellSize = size.width / 8
         val hasJumpsAvailable = GameLogic.hasJumpsAvailable(board, isRedTurn)
 
         // Draw board squares, coordinates, and highlights
