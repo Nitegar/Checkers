@@ -5,18 +5,19 @@ import de.htwg.model.*
 import de.htwg.model.GameLogic.*
 import de.htwg.model.command.{CommandHistory, MoveCommand}
 
-import scala.io.StdIn.readLine
+import scala.concurrent.Await
+import scala.concurrent.duration.*
 import scala.util.{Failure, Success}
 
 // --- State Interface ---
 sealed trait GameState {
-  def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean)
+  def process(controller: GameController.type, board: Board, isRedTurn: Boolean, inputHandler: InputHandler): (GameState, Board, Boolean)
 }
 
 // --- Concrete States ---
 
 case object AwaitingInputState extends GameState {
-  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
+  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean, inputHandler: InputHandler): (GameState, Board, Boolean) = {
 
     // Check for game end conditions
     val (red, black) = countPieces(board)
@@ -34,11 +35,12 @@ case object AwaitingInputState extends GameState {
   }
 }
 
-// In de.htwg.controller.InputHandlingState
 case object InputHandlingState extends GameState {
-  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
+  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean, inputHandler: InputHandler): (GameState, Board, Boolean) = {
 
-    val input = readLine().trim.toLowerCase
+    // Use the input handler to get input (works for both TUI and GUI)
+    val inputFuture = inputHandler.requestInput()
+    val input = Await.result(inputFuture, Duration.Inf).trim.toLowerCase
 
     input match {
       case "quit" | "q" =>
@@ -46,36 +48,31 @@ case object InputHandlingState extends GameState {
         (GameOverState, board, isRedTurn)
 
       case "undo" | "u" =>
-        // 1. Attempt to undo the last move
         CommandHistory.undo(board) match {
           case Some(previousBoard) =>
-            controller.notifyObservers(MoveUndone) // Notify view (new event needed)
-            // Go back to the previous board and flip the turn
+            controller.notifyObservers(MoveUndone)
             (AwaitingInputState, previousBoard, !isRedTurn)
           case None =>
             controller.notifyObservers(MoveFailed("Nothing to undo."))
-            Thread.sleep(800)
-            (AwaitingInputState, board, isRedTurn) // Stay with same board/turn
+//            Thread.sleep(800)
+            (AwaitingInputState, board, isRedTurn)
         }
 
       case "redo" | "r" =>
-        // 1. Attempt to redo the last undone move
         CommandHistory.redo(board) match {
           case Some(nextBoard) =>
-            controller.notifyObservers(MoveRedone) // Notify view (new event needed)
-            // Advance to the next board and flip the turn
+            controller.notifyObservers(MoveRedone)
             (AwaitingInputState, nextBoard, !isRedTurn)
           case None =>
             controller.notifyObservers(MoveFailed("Nothing to redo."))
-            Thread.sleep(800)
-            (AwaitingInputState, board, isRedTurn) // Stay with same board/turn
+//            Thread.sleep(800)
+            (AwaitingInputState, board, isRedTurn)
         }
 
       case moveInput =>
         controller.parseInput(moveInput) match {
-
-          case Success(input) =>
-            (MoveExecutionState(input), board, isRedTurn)
+          case Success(parsedInput) =>
+            (MoveExecutionState(parsedInput), board, isRedTurn)
 
           case Failure(e) =>
             controller.notifyObservers(InvalidInput(e.getMessage))
@@ -84,30 +81,30 @@ case object InputHandlingState extends GameState {
     }
   }
 }
+
 case class MoveExecutionState(input: Input) extends GameState {
-  override def process(controller: GameController.type, currentBoard: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
+  override def process(controller: GameController.type, currentBoard: Board, isRedTurn: Boolean, inputHandler: InputHandler): (GameState, Board, Boolean) = {
 
-    // 1. Coordinate Flipping
-    val (srcR, srcC, destR, destC) =
-      if (isRedTurn) (input.srcRow, input.srcCol, input.destRow, input.destCol)
-      else (7 - input.srcRow, 7 - input.srcCol, 7 - input.destRow, 7 - input.destCol)
+    // Coordinate Flipping
+    val (srcR, srcC, destR, destC) = (input.srcRow, input.srcCol, input.destRow, input.destCol)
+//      if (isRedTurn) (input.srcRow, input.srcCol, input.destRow, input.destCol)
+//      else (7 - input.srcRow, 7 - input.srcCol, 7 - input.destRow, 7 - input.destCol)
 
-    // 2. Piece Ownership/Empty Check (Simplified from original due to return constraints)
+    // Piece Ownership/Empty Check
     currentBoard(srcR)(srcC) match {
       case Regular(isRed) if isRed != isRedTurn =>
         controller.notifyObservers(MoveFailed("Not your piece."))
-        Thread.sleep(800)
+//        Thread.sleep(800)
         return (AwaitingInputState, currentBoard, isRedTurn)
 
-      // Case 2: The piece is King AND its color is NOT the current player's color
       case King(isRed) if isRed != isRedTurn =>
         controller.notifyObservers(MoveFailed("Not your piece."))
-        Thread.sleep(800)
+//        Thread.sleep(800)
         return (AwaitingInputState, currentBoard, isRedTurn)
 
       case Empty =>
         controller.notifyObservers(MoveFailed("No piece at that position."))
-        Thread.sleep(800)
+//        Thread.sleep(800)
         return (AwaitingInputState, currentBoard, isRedTurn)
       case _ =>
     }
@@ -118,7 +115,7 @@ case class MoveExecutionState(input: Input) extends GameState {
     if (success) {
       if (command.wasJump) {
         controller.notifyObservers(KillEffect(command.killCount))
-        Thread.sleep(2000)
+//        Thread.sleep(2000)
       }
       CommandHistory.push(command)
       (AwaitingInputState, newBoard, !isRedTurn)
@@ -127,7 +124,7 @@ case class MoveExecutionState(input: Input) extends GameState {
       val reason = if (requiredJumpMissed) "Must make jump." else "Invalid move."
 
       controller.notifyObservers(MoveFailed(reason))
-      Thread.sleep(800)
+//      Thread.sleep(800)
 
       (AwaitingInputState, currentBoard, isRedTurn)
     }
@@ -135,8 +132,7 @@ case class MoveExecutionState(input: Input) extends GameState {
 }
 
 case object GameOverState extends GameState {
-  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
-    // Terminal state. Return itself.
+  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean, inputHandler: InputHandler): (GameState, Board, Boolean) = {
     (GameOverState, board, isRedTurn)
   }
 }

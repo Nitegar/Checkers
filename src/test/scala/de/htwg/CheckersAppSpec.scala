@@ -25,14 +25,14 @@ class CheckersAppSpec extends AnyWordSpec with Matchers {
 
       "start the game and display welcome message" in {
         val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
+          GuiApp.main(Array.empty)
         }
         output should include("WELCOME TO CHECKERS")
       }
 
       "initialize the game controller successfully" in {
         val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
+          GuiApp.main(Array.empty)
         }
         output should include("RED")
       }
@@ -42,7 +42,7 @@ class CheckersAppSpec extends AnyWordSpec with Matchers {
 
       "ignore arguments and start game normally" in {
         val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array("arg1", "arg2", "arg3"))
+          GuiApp.main(Array("arg1", "arg2", "arg3"))
         }
         output should include("WELCOME TO CHECKERS")
       }
@@ -53,7 +53,7 @@ class CheckersAppSpec extends AnyWordSpec with Matchers {
       "delegate to GameController.startGame()" in {
         // This test verifies the integration between CheckersApp and GameController
         val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
+          GuiApp.main(Array.empty)
         }
         // Should show game elements that only GameController.startGame() produces
         output should include("CHECKERS")

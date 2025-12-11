@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module external.linked.project.id="checkers:test [file:/Users/edgarmandefield/Nextcloud/HTWG/3.%20Semester/software_engineering/Checkers/]" external.linked.project.path="$MODULE_DIR$/../../.." external.root.project.path="$MODULE_DIR$/../../.." external.system.id="SBT" external.system.module.type="sbtSourceSet" type="JAVA_MODULE" version="4">
+<module external.linked.project.id="checkers:test [file:///Users/edgarmandefield/Nextcloud/HTWG/3.%20Semester/software_engineering/Checkers/]" external.linked.project.path="$MODULE_DIR$/../../.." external.root.project.path="$MODULE_DIR$/../../.." external.system.id="SBT" external.system.module.type="sbtSourceSet" type="JAVA_MODULE" version="4">
   <component name="DisplayModuleName">
     <option name="name" value="checkers.test" />
   </component>
@@ -17,6 +17,7 @@
     <orderEntry type="module" module-name="checkers.main" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.3.7:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest_3:3.2.19:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-swing_3:3.0.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.16:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-core_3:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-featurespec_3:3.2.19:jar" level="project" />

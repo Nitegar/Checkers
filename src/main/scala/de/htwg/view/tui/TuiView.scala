@@ -4,7 +4,7 @@ import de.htwg.model._
 import de.htwg.model.Board._
 import de.htwg.util.Observer
 
-object ConsoleView extends Observer[GameEvent] {
+object TuiView extends Observer[GameEvent] {
 
   // Store the last known board state to access piece counts when RequestInput arrives
   private var currentBoard: Option[Board] = None
