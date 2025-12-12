@@ -112,8 +112,8 @@ object TuiView extends Observer[GameEvent] {
     val red = "\u001b[91m"
     val black = "\u001b[90m"
 
-    val displayBoard =
-      if (isRedTurn) board else board.reverse.map(_.reverse)
+    // Don't flip the board for black or red
+    val displayBoard = board
 
     val columns = ('a' to 'h').map(c => s" $c ").mkString
     val sb = new StringBuilder

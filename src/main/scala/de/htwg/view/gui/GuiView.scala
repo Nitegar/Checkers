@@ -292,7 +292,7 @@ object GuiView extends Observer[GameEvent] {
       }
     }
   }
-  
+
   private def trySelectPiece(board: Board, row: Int, col: Int): Unit = {
     Swing.onEDT {
       board(row)(col) match {

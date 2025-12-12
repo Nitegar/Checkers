@@ -8,4 +8,4 @@ object TuiInputHandler extends InputHandler {
     override def requestInput(): Future[String] = Future {
         StdIn.readLine().trim.toLowerCase
     }
-}   
+}

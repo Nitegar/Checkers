@@ -1,6 +1,6 @@
 package de.htwg
 
-import de.htwg.controller.{GameController, GuiInputHandler, TuiInputHandler}
+import de.htwg.controller.{GameController, GuiInputHandler, MultiInputHandler, TuiInputHandler}
 import de.htwg.view.gui.GuiView
 import de.htwg.view.tui.TuiView
 
@@ -43,7 +43,7 @@ object CheckersApp {
     GameController.setInputHandler(GuiInputHandler)
     GameController.add(GuiView)
 
-    // Start the game asynchronously to prevent freezing the environment 
+    // Start the game asynchronously to prevent freezing the environment
     // before the EDT is fully running.
     new Thread(() => {
       try {
@@ -71,42 +71,20 @@ object CheckersApp {
 
   /**
    * Configures the application for parallel mode:
-   * Both GUI and TUI can provide input. Both GUI and TUI display updates.
+   * GUI handles input and display. TUI only handles display (logging output).
    */
   private def launchParallel(): Unit = {
-    println("Starting Checkers in Parallel Mode (GUI & TUI Input, GUI & TUI Display)...")
+    println("Starting Checkers in Parallel Mode (GUI Input, GUI & TUI Display)...")
 
-    // 1. Set Input Handler: Use GUI as the primary mechanism driver.
-    // The GameController's internal loop will call GuiInputHandler.requestInput(), 
-    // which usually waits on an internal queue (fed by GUI clicks).
-    GameController.setInputHandler(GuiInputHandler)
+    // 1. Set Input Handler: Prioritize GUI as the primary source for interactive input
+    GameController.setInputHandler(
+      new MultiInputHandler(GuiInputHandler, TuiInputHandler)
+    )
 
-    // 2. Add BOTH Views as Observers: Both will receive updates from the Controller
     GameController.add(GuiView)
     GameController.add(TuiView)
 
-    // 3. Start a dedicated TUI input thread.
-    // This thread will continuously read from the console (TUI is blocking)
-    // and submit the input directly to the GameController's input queue via setInput.
-    new Thread(() => {
-      try {
-        // Run forever, listening for console input
-        while (true) {
-          // Blocking call to read console input
-          val input = scala.io.StdIn.readLine()
-
-          // Submit the input directly to the GameController's queue.
-          // This allows TUI commands to be processed in parallel with GUI clicks.
-          GameController.setInput(input)
-        }
-      } catch {
-        case e: Exception =>
-          // Log interruption or error if the thread stops unexpectedly
-          println(s"TUI input listener stopped: ${e.getMessage}")
-      }
-    }).start()
-
-    // 4. Start Game: Must be asynchronous to allow the GUI window to render 
+    // 3. Start Game: Must be asynchronous to allow the GUI window to render
     // and prevent the environment from freezing.
     new Thread(() => {
       try {
