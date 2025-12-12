@@ -4,6 +4,10 @@ ThisBuild / scalaVersion := "3.3.7"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test"
 libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
+libraryDependencies ++= Seq(
+  "org.scalatestplus" %% "mockito-4-11" % "3.2.18.0" % Test,
+  "org.mockito" % "mockito-core" % "5.11.0" % Test
+)
 
 // build.sbt
 inThisBuild(List(

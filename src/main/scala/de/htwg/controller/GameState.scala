@@ -4,16 +4,18 @@ import de.htwg.model.Board.Board
 import de.htwg.model.*
 import de.htwg.model.GameLogic.*
 import de.htwg.model.command.{CommandHistory, MoveCommand}
+
+import scala.concurrent.Await
+import scala.concurrent.duration.*
 import scala.util.{Failure, Success}
 
-// --- State Interface (REMOVED SYNCHRONOUS PROCESS METHOD) ---
-sealed trait GameState
+sealed trait GameState {
+  def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean)
+}
 
-// --- Concrete States ---
 
 case object AwaitingInputState extends GameState {
-  // NEW: Non-blocking preparation phase
-  def processPreparation(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
+  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
 
     // Check for game end conditions
     val (red, black) = countPieces(board)
@@ -24,19 +26,21 @@ case object AwaitingInputState extends GameState {
 
     controller.notifyObservers(TurnAnnounced(isRedTurn))
     controller.notifyObservers(BoardUpdated(board, isRedTurn))
-    // RequestInput is handled by the GameController's runGameLoop
+    controller.notifyObservers(RequestInput(isRedTurn))
 
+    // Transition to the Input Handling State
     (InputHandlingState, board, isRedTurn)
   }
 }
 
 case object InputHandlingState extends GameState {
-  // NEW: Non-blocking method that processes the input string that has already been retrieved
-  def processInput(controller: GameController.type, board: Board, isRedTurn: Boolean, input: String): (GameState, Board, Boolean) = {
+  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
 
-    val cleanInput = input.trim.toLowerCase
+    // Use the input handler to get input (works for both TUI and GUI)
+    val inputFuture = controller.getInputHandler.requestInput()
+    val input = Await.result(inputFuture, Duration.Inf).trim.toLowerCase
 
-    cleanInput match {
+    input match {
       case "quit" | "q" =>
         controller.notifyObservers(QuitGame)
         (GameOverState, board, isRedTurn)
@@ -75,10 +79,18 @@ case object InputHandlingState extends GameState {
 }
 
 case class MoveExecutionState(input: Input) extends GameState {
-  // NEW: Non-blocking method for move execution
-  def processExecution(controller: GameController.type, currentBoard: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
+  override def process(controller: GameController.type, currentBoard: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
 
-    val (srcR, srcC, destR, destC) = (input.srcRow, input.srcCol, input.destRow, input.destCol)
+    val shouldFlip = !isRedTurn && controller.isTuiActive
+
+    val (srcR, srcC, destR, destC) =
+      if (shouldFlip) {
+        // Apply the flip ONLY for TUI Black moves
+        (7 - input.srcRow, 7 - input.srcCol, 7 - input.destRow, 7 - input.destCol)
+      } else {
+        // Use coordinates directly (used by Red TUI, and all GUI moves)
+        (input.srcRow, input.srcCol, input.destRow, input.destCol)
+      }
 
     // Piece Ownership/Empty Check
     currentBoard(srcR)(srcC) match {
@@ -116,4 +128,8 @@ case class MoveExecutionState(input: Input) extends GameState {
   }
 }
 
-case object GameOverState extends GameState
+case object GameOverState extends GameState {
+  override def process(controller: GameController.type, board: Board, isRedTurn: Boolean): (GameState, Board, Boolean) = {
+    (GameOverState, board, isRedTurn)
+  }
+}

@@ -18,6 +18,8 @@
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.3.7:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest_3:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-swing_3:3.0.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scalatestplus:mockito-4-11_3:3.2.18.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.mockito:mockito-core:5.11.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.16:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-core_3:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-featurespec_3:3.2.19:jar" level="project" />
@@ -32,6 +34,9 @@
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-matchers-core_3:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-shouldmatchers_3:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-mustmatchers_3:3.2.19:jar" level="project" />
+    <orderEntry type="library" name="sbt: net.bytebuddy:byte-buddy:1.14.12:jar" level="project" />
+    <orderEntry type="library" name="sbt: net.bytebuddy:byte-buddy-agent:1.14.12:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.objenesis:objenesis:3.3:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalactic:scalactic_3:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalatest:scalatest-compatible:3.2.19:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-xml_3:2.1.0:jar" level="project" />

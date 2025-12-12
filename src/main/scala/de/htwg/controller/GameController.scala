@@ -3,21 +3,45 @@ package de.htwg.controller
 import de.htwg.model.*
 import de.htwg.model.Board.*
 import de.htwg.util.Observable
-import scala.concurrent.{ExecutionContext, Future} // NEW: Future and ExecutionContext
+import de.htwg.view.tui.TuiView
+
+import scala.io.StdIn.readLine
 import scala.util.{Failure, Success, Try}
+import java.util.concurrent.LinkedBlockingQueue
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-// --- REQUIRED FOR ASYNCHRONOUS EXECUTION ---
+/**
+ * GameController acts as the central state manager and event publisher (Subject).
+ * It contains only game logic and publishes abstract GameEvents.
+ *
+ * MODIFIED: Now supports non-blocking input via an internal queue for GUI support.
+ */
 object GameController extends Observable[GameEvent] {
-  implicit val executionContext: ExecutionContext = ExecutionContext.global
 
-  // State variables are now object members to be updated by runGameLoop
-  private var currentState: GameState = AwaitingInputState
-  private var currentBoard: Board = Board().withStandardSetup().build()
-  private var isRedTurn: Boolean = true
-  private var inputHandler: InputHandler = TuiInputHandler
+  // --- New: Non-blocking input handling for GUI/TUI ---
+  private val inputQueue = new LinkedBlockingQueue[String]()
+  private var isGuiMode: Boolean = false // Flag to switch between blocking TUI and non-blocking GUI wait
+
+  /** Injects input from the GUI or other sources. */
+  def setInput(input: String): Unit = inputQueue.put(input)
+
+  /** Retrieves the next input. Blocks until input is provided. */
+  def retrieveInput(): String = {
+    // This blocks, waiting for the TUI readLine or the GUI setInput to inject an element.
+    inputQueue.take()
+  }
 
   // Convert column letter (a-h) to index (0-7)
+  /**
+   * Converts a column character ('a'-'h') to a 0-based index (0-7).
+   * Returns Failure if the character is out of range.
+   *
+   * @param col The column character (e.g., 'a', 'h').
+   * @return Success(index) or Failure(IllegalArgumentException).
+   */
   def columnToIndex(col: Char): Try[Int] = {
+    // Ensure case-insensitivity by converting to lower case
     val lowerCol = col.toLower
     val index = lowerCol - 'a'
 
@@ -28,6 +52,13 @@ object GameController extends Observable[GameEvent] {
     }
   }
 
+  /**
+   * Converts a row number (1-8) to a 0-based index (0-7).
+   * Returns Failure if the number is out of range.
+   *
+   * @param row The row number (e.g., 1, 8).
+   * @return Success(index) or Failure(IllegalArgumentException).
+   */
   def rowToIndex(row: Int): Try[Int] = {
     val index = row - 1
 
@@ -38,6 +69,9 @@ object GameController extends Observable[GameEvent] {
     }
   }
 
+  /**
+   * Helper function to safely parse a row string into an Int.
+   */
   private def parseRowString(rowStr: String, pos: String): Try[Int] = {
     Try(rowStr.toInt).recoverWith {
       case _: NumberFormatException =>
@@ -45,12 +79,21 @@ object GameController extends Observable[GameEvent] {
     }
   }
 
+  /**
+   * Parses a chess move string (e.g., "A1 B2") into an Input case class.
+   * Uses a for-comprehension over Try to sequence coordinate validation and parsing.
+   *
+   * @param input The raw input string.
+   * @return Success(Input) with 0-based indices or Failure(IllegalArgumentException).
+   */
   def parseInput(input: String): Try[Input] = {
+    // 1. Basic format validation
     val parts = input.trim.toLowerCase.split("\\s+")
     if (parts.length != 2) {
       return Failure(new IllegalArgumentException("Invalid format. Expected format: 'A1 B2' (source destination)."))
     }
 
+    // 2. Extract parts
     val srcStr = parts(0)
     val destStr = parts(1)
 
@@ -58,13 +101,16 @@ object GameController extends Observable[GameEvent] {
       return Failure(new IllegalArgumentException("Coordinates must contain a column and a row (e.g., A1)."))
     }
 
+    // 3. Sequential validation using a Try for-comprehension
     for {
+      // Source Parsing
       srcColChar <- Try(srcStr.charAt(0))
       srcColIdx <- columnToIndex(srcColChar)
       srcRowStr = srcStr.substring(1)
       srcRowInt <- parseRowString(srcRowStr, "source")
       srcRowIdx <- rowToIndex(srcRowInt)
 
+      // Destination Parsing
       destColChar <- Try(destStr.charAt(0))
       destColIdx <- columnToIndex(destColChar)
       destRowStr = destStr.substring(1)
@@ -74,71 +120,65 @@ object GameController extends Observable[GameEvent] {
     } yield Input(srcRowIdx, srcColIdx, destRowIdx, destColIdx)
   }
 
+  // --- State Management ---
+  private var currentState: GameState = AwaitingInputState
+  // RESTORED: InputHandler state and methods
+  private var inputHandler: InputHandler = TuiInputHandler
 
+  def isTuiActive: Boolean = inputHandler == TuiInputHandler
 
   def setInputHandler(handler: InputHandler): Unit = {
     inputHandler = handler
   }
-  // --- ASYNCHRONOUS START GAME (REMOVED ALL BLOCKING CODE) ---
-  def startGame(): Unit = {
+
+  def getInputHandler: InputHandler = inputHandler
+  // END RESTORED
+
+  /**
+   * Starts the game loop.
+   * @param useGui If true, starts the game loop in a non-blocking background thread for GUI.
+   */
+  def startGame(useGui: Boolean = false): Unit = {
+    this.isGuiMode = useGui
+    this.add(TuiView) // TUI is always active for logging/alternative output
+
+    // If using GUI, run the state machine in a separate thread
+    if (useGui) {
+      Future { runGameLoop() }
+    } else {
+      // For TUI, just run the loop in the current thread (it will block)
+      runGameLoop()
+    }
+  }
+
+  private def runGameLoop(): Unit = {
     notifyObservers(StartGame())
 
-    // 1. Initialize State and Board
-    currentBoard = Board().withStandardSetup().build()
-    isRedTurn = true
+    // Initial TUI prompt
+    if (!isGuiMode) {
+      notifyObservers(RequestInput(isRedTurn = true))
+      // TUI: Blocks and directly reads from console, then injects into the queue
+      val input = readLine()
+      inputQueue.put(input)
+    }
+
+    // --- State Machine Execution Loop ---
+    var currentBoard: Board = Board().withStandardSetup().build()
+    var isRedTurn: Boolean = true
+
+    // Start the state machine iteration
     currentState = AwaitingInputState
 
-    // 2. Start the non-blocking game loop immediately.
-    runGameLoop(currentState, currentBoard, isRedTurn)
-  }
+    while (currentState != GameOverState) {
+      // The current state processes the request (input, execution, etc.)
+      // and returns the NEXT state, the new board, and whose turn it is.
+      val (nextState, newBoard, nextTurn) = currentState.process(this, currentBoard, isRedTurn)
 
-  // --- ASYNCHRONOUS GAME LOOP (Recursive Future Chain) ---
-  private def runGameLoop(state: GameState, board: Board, redTurn: Boolean): Unit = {
-    // Update the state variables
-    currentState = state
-    currentBoard = board
-    isRedTurn = redTurn
-
-    // Phase 1: Preparation/Announcement (Uses the new processPreparation)
-    val (stateAfterPrep, boardAfterPrep, turnAfterPrep) = state match {
-      case AwaitingInputState =>
-        AwaitingInputState.processPreparation(this, board, redTurn)
-      case _ => (state, board, redTurn)
-    }
-
-    stateAfterPrep match {
-      case GameOverState =>
-        return
-
-      case InputHandlingState =>
-        notifyObservers(RequestInput(turnAfterPrep))
-
-        // This is the only place we request input. The resulting Future determines when to continue.
-        inputHandler.requestInput().onComplete {
-          case Success(input) =>
-            // Phase 2: Process the input (using the new processInput)
-            val (nextState, nextBoard, nextTurn) =
-              InputHandlingState.processInput(this, boardAfterPrep, turnAfterPrep, input)
-
-            // Phase 3: Execute the move (using the new processExecution)
-            val (finalState, finalBoard, finalTurn) = nextState match {
-              case MoveExecutionState(parsedInput) =>
-                MoveExecutionState(parsedInput).processExecution(this, nextBoard, nextTurn)
-              case _ => (nextState, nextBoard, nextTurn)
-            }
-
-            // Phase 4: Recurse for the next turn
-            if (finalState != GameOverState) {
-              runGameLoop(finalState, finalBoard, finalTurn)
-            }
-
-          case Failure(e) =>
-            notifyObservers(InvalidInput(s"Input handler error: ${e.getMessage}"))
-            runGameLoop(AwaitingInputState, boardAfterPrep, turnAfterPrep)
-        }
-
-      case _ =>
-        runGameLoop(AwaitingInputState, boardAfterPrep, turnAfterPrep)
+      // Update the context variables for the next iteration
+      currentState = nextState
+      currentBoard = newBoard
+      isRedTurn = nextTurn
     }
   }
+
 }
