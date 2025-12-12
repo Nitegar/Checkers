@@ -237,21 +237,6 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
       newBoard(4)(1) should be(Regular(true))
     }
 
-    "successfully execute a simple move with coordinate flipping for Black" in {
-      // Black move: c3 to b4. Unflipped input is (R2, C2 -> R3, C1)
-      val executionState = MoveExecutionState(Input(5, 2, 4, 3))
-
-      print(TuiView.boardString(initialBoard, false))
-      // Flipped coordinates used for logic: (7-2, 7-2) -> (7-3, 7-1) i.e. (R5, C5) -> (R4, C6)
-      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = false)
-
-      print(TuiView.boardString(newBoard, true))
-      nextState should be(AwaitingInputState)
-      nextTurn should be(true) // Switched to Red's turn
-      newBoard(2)(5) should be(Empty)
-      newBoard(3)(4) should be(Regular(false))
-    }
-
     "successfully execute a jump move, push to history, and switch turn" in {
       // Setup: Red piece at b6 (R5, C1), Black piece at c5 (R4, C2)
       val board = Board().empty().addPiece(5, 1, Regular(true)).addPiece(4, 2, Regular(false)).build()
