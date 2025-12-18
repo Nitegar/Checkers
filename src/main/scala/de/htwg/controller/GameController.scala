@@ -12,6 +12,10 @@ import scala.util.{Failure, Success, Try}
  */
 object GameController extends Observable[GameEvent] {
 
+  private var turnCount: Int = 0
+
+  def getCurrentTurn: Int = turnCount
+
   // Convert column letter (a-h) to index (0-7)
   def columnToIndex(col: Char): Try[Int] = {
     val lowerCol = col.toLower
@@ -84,17 +88,22 @@ object GameController extends Observable[GameEvent] {
 
   def startGame(): Unit = {
     notifyObservers(StartGame())
-
     notifyObservers(RequestInput(isRedTurn = true))
 
-    // --- State Machine Execution Loop ---
     var currentBoard: Board = Board().withStandardSetup().build()
     var isRedTurn: Boolean = true
 
-    // Start the state machine iteration
     currentState = AwaitingInputState
 
     while (currentState != GameOverState) {
+      turnCount += 1
+
+      // Flush the buffer to fix the "Double Enter" bug
+      while (System.in.available() > 0) {
+        System.in.read()
+      }
+      
+      // CHANGE 'this' TO 'GameController' HERE
       val (nextState, newBoard, nextTurn) = currentState.process(this, currentBoard, isRedTurn)
 
       currentState = nextState

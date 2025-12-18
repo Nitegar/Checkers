@@ -8,17 +8,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * The first one that produces input "wins" the turn.
  */
 class MultiInputHandler(handlers: InputHandler*) extends InputHandler {
-
   override def requestInput(): Future[String] = {
     val promise = Promise[String]()
+    val turnAtRequest = GameController.getCurrentTurn
 
-    // Start all input handlers in parallel
     handlers.foreach { handler =>
       handler.requestInput().foreach { input =>
-        promise.trySuccess(input) // only the first success counts
+        // Only fulfill if we are still on the same turn
+        // AND the input isn't just a leftover empty string
+        if (GameController.getCurrentTurn == turnAtRequest && input.nonEmpty) {
+          promise.trySuccess(input)
+        }
       }
     }
-
     promise.future
   }
 }
