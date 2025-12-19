@@ -97,12 +97,6 @@ object GameController extends Observable[GameEvent] {
 
     while (currentState != GameOverState) {
       turnCount += 1
-
-      // Flush the buffer to fix the "Double Enter" bug
-      while (System.in.available() > 0) {
-        System.in.read()
-      }
-      
       // CHANGE 'this' TO 'GameController' HERE
       val (nextState, newBoard, nextTurn) = currentState.process(this, currentBoard, isRedTurn)
 

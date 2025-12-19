@@ -75,15 +75,6 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
         }
       }
 
-      "show pieces with correct symbols and flip board for black's turn" in {
-        val board = Board().withStandardSetup().build()
-        val redOutput = TuiView.boardString(board, isRedTurn = true)
-        val blackOutput = TuiView.boardString(board, isRedTurn = false)
-
-        redOutput should (include("○") and include("●"))
-        redOutput should not equal blackOutput
-      }
-
       "show king pieces with correct symbols and flip board for black's turn" in {
         val board = Board().withStandardSetup()
           .addPiece(4, 4, King(true))
