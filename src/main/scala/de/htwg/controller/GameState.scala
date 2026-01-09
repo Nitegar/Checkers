@@ -84,13 +84,6 @@ case class MoveExecutionState(input: Input) extends GameState {
     val shouldFlip = !isRedTurn && controller.isTuiActive
 
     val (srcR, srcC, destR, destC) = (input.srcRow, input.srcCol, input.destRow, input.destCol)
-//      if (shouldFlip) {
-//        // Apply the flip ONLY for TUI Black moves
-//        (7 - input.srcRow, 7 - input.srcCol, 7 - input.destRow, 7 - input.destCol)
-//      } else {
-//        // Use coordinates directly (used by Red TUI, and all GUI moves)
-//        (input.srcRow, input.srcCol, input.destRow, input.destCol)
-//      }
 
     // Piece Ownership/Empty Check
     currentBoard(srcR)(srcC) match {
