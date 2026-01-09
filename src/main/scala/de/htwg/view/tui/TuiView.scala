@@ -4,7 +4,7 @@ import de.htwg.model._
 import de.htwg.model.Board._
 import de.htwg.util.Observer
 
-object ConsoleView extends Observer[GameEvent] {
+object TuiView extends Observer[GameEvent] {
 
   // Store the last known board state to access piece counts when RequestInput arrives
   private var currentBoard: Option[Board] = None
@@ -112,8 +112,8 @@ object ConsoleView extends Observer[GameEvent] {
     val red = "\u001b[91m"
     val black = "\u001b[90m"
 
-    val displayBoard =
-      if (isRedTurn) board else board.reverse.map(_.reverse)
+    // Don't flip the board for black or red
+    val displayBoard = board
 
     val columns = ('a' to 'h').map(c => s" $c ").mkString
     val sb = new StringBuilder

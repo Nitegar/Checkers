@@ -3,15 +3,22 @@ package de.htwg.controller
 import de.htwg.model.*
 import de.htwg.model.Board.Board
 import de.htwg.model.command.CommandHistory
-import de.htwg.view.tui.ConsoleView
+import de.htwg.view.tui.TuiView
 import org.scalatest.TryValues.convertTryToSuccessOrFailure
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.io.ByteArrayInputStream
+import scala.concurrent.Future
 import scala.util.Success
 
 class GameControllerSpec extends AnyWordSpec with Matchers {
+
+  class TestInputStub(testInput: String) extends InputHandler {
+    // Returns a Future that is already resolved with the test string
+    override def requestInput(): Future[String] = {
+      Future.successful(testInput)
+    }
+  }
 
 
   private def createSimpleBoard(): Board = Board().empty()
@@ -25,10 +32,19 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
    */
   private def processStep(state: GameState, board: Board, isRedTurn: Boolean, input: String): (GameState, Board, Boolean) = {
     // Use ByteArrayInputStream to mock readLine()
-    val inStream = new ByteArrayInputStream(input.getBytes)
-    // We only need to redirect Console.in for the duration of the process call
-    Console.withIn(inStream) {
+    val originalHandler = GameController.getInputHandler
+
+    // 2. Create the stub with the specific test input and inject it
+    val testStub = new TestInputStub(input)
+    GameController.setInputHandler(testStub)
+
+    try {
+      // 3. Run the state process. Await.result will block, but the stub's Future
+      // is already completed, so it resolves instantly with the desired input.
       state.process(GameController, board, isRedTurn)
+    } finally {
+      // 4. CRITICAL: Restore the original handler (TuiInputHandler/GuiInputHandler)
+      GameController.setInputHandler(originalHandler)
     }
   }
 
@@ -132,10 +148,10 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
     val initialBoard = createSimpleBoard() // Red at e6, Black at d3
 
     "transition to GameOverState on 'quit' or 'q' input" in {
-      val (nextStateQ, _, _) = processStep(InputHandlingState, initialBoard, true, "q\n")
+      val (nextStateQ, _, _) = processStep(InputHandlingState, initialBoard, true, "q")
       nextStateQ should be(GameOverState)
 
-      val (nextStateQuit, _, _) = processStep(InputHandlingState, initialBoard, true, "quit\n")
+      val (nextStateQuit, _, _) = processStep(InputHandlingState, initialBoard, true, "quit")
       nextStateQuit should be(GameOverState)
     }
 
@@ -147,12 +163,11 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
       CommandHistory.push(moveCommand)
 
       // 2. Undo
-      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, movedBoard, false, "undo\n")
+      val (nextState, newBoard, nextTurn) = processStep(InputHandlingState, movedBoard, false, "undo")
 
-      // Should revert board and flip turn
       nextState should be(AwaitingInputState)
       newBoard should be(initialBoard)
-      nextTurn should be(true) // Turn flips back to Red
+      nextTurn should be(true)
     }
 
     "stay in AwaitingInputState on failed 'undo' (empty history)" in {
@@ -220,21 +235,6 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
       nextTurn should be(false) // Switched to Black's turn
       newBoard(5)(0) should be(Empty)
       newBoard(4)(1) should be(Regular(true))
-    }
-
-    "successfully execute a simple move with coordinate flipping for Black" in {
-      // Black move: c3 to b4. Unflipped input is (R2, C2 -> R3, C1)
-      val executionState = MoveExecutionState(Input(5, 2, 4, 3))
-
-      print(ConsoleView.boardString(initialBoard, false))
-      // Flipped coordinates used for logic: (7-2, 7-2) -> (7-3, 7-1) i.e. (R5, C5) -> (R4, C6)
-      val (nextState, newBoard, nextTurn) = executionState.process(GameController, initialBoard, isRedTurn = false)
-
-      print(ConsoleView.boardString(newBoard, true))
-      nextState should be(AwaitingInputState)
-      nextTurn should be(true) // Switched to Red's turn
-      newBoard(2)(5) should be(Empty)
-      newBoard(3)(4) should be(Regular(false))
     }
 
     "successfully execute a jump move, push to history, and switch turn" in {

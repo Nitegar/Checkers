@@ -2,62 +2,44 @@ package de.htwg
 
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
-import de.htwg.controller.GameController
-
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, PrintStream}
+import de.htwg.controller.{GameController, GuiInputHandler, TuiInputHandler, MultiInputHandler}
 
 class CheckersAppSpec extends AnyWordSpec with Matchers {
 
-  private def captureOutput(input: String = "")(block: => Unit): String = {
-    val outStream = new ByteArrayOutputStream()
-    val inStream = new ByteArrayInputStream(input.getBytes)
-    Console.withOut(new PrintStream(outStream)) {
-      Console.withIn(inStream) {
-        block
-      }
-    }
-    outStream.toString
-  }
+  "The CheckersApp" when {
 
-  "CheckersApp" when {
+    "started with --tui or -t" should {
+      "configure the GameController for TUI mode" in {
+        CheckersApp.main(Array("--tui"))
 
-    "the main method is called" should {
-
-      "start the game and display welcome message" in {
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
-        }
-        output should include("WELCOME TO CHECKERS")
-      }
-
-      "initialize the game controller successfully" in {
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
-        }
-        output should include("RED")
+        GameController.getInputHandler should be (TuiInputHandler)
       }
     }
 
-    "executed with command line arguments" should {
+    "started with --gui or -g" should {
+      "configure the GameController for GUI mode" in {
+        CheckersApp.main(Array("--gui"))
 
-      "ignore arguments and start game normally" in {
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array("arg1", "arg2", "arg3"))
-        }
-        output should include("WELCOME TO CHECKERS")
+        // Wait briefly for the thread to trigger setInputHandler if necessary
+        // Though in your code, it's set before the thread starts
+        GameController.getInputHandler should be (GuiInputHandler)
       }
     }
 
-    "the application starts" should {
+    "started with --parallel or -p" should {
+      "configure a MultiInputHandler with both TUI and GUI handlers" in {
+        CheckersApp.main(Array("--parallel"))
 
-      "delegate to GameController.startGame()" in {
-        // This test verifies the integration between CheckersApp and GameController
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
-        }
-        // Should show game elements that only GameController.startGame() produces
-        output should include("CHECKERS")
-        output should not be empty
+        val handler = GameController.getInputHandler
+        handler shouldBe a [MultiInputHandler]
+      }
+    }
+
+    "started with invalid arguments" should {
+      "default to GUI mode" in {
+        CheckersApp.main(Array("--unknown"))
+
+        GameController.getInputHandler should be (GuiInputHandler)
       }
     }
   }
