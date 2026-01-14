@@ -1,7 +1,8 @@
 package de.htwg.view.tui
 
-import de.htwg.model._
-import de.htwg.model.Board._
+import de.htwg.controller.*
+import de.htwg.model.*
+import de.htwg.model.Board.*
 import de.htwg.util.Observer
 
 object TuiView extends Observer[GameEvent] {

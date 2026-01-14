@@ -1,5 +1,6 @@
 package de.htwg.view.tui
 
+import de.htwg.controller.{BoardUpdated, GameEnded, InvalidInput, KillEffect, MoveFailed, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.model.*
 import de.htwg.view.tui.{AsciiEffect, TuiView}
 import org.scalatest.matchers.should.Matchers

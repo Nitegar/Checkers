@@ -1,13 +1,9 @@
 package de.htwg.controller
 
-trait IController {
-  def setInputHandler(handler: InputHandler): Unit
+import de.htwg.model.Board.Board
+import de.htwg.util.Observable
 
-  def add(observer: AnyRef): Unit
-
+trait IController extends Observable[GameEvent] {
   def startGame(): Unit
-
-  def getInputHandler: InputHandler
-
-  def isTuiActive: Boolean
 }
+

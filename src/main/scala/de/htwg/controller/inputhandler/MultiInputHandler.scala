@@ -1,22 +1,32 @@
-package de.htwg.controller
+package de.htwg.controller.inputhandler
 
-import scala.concurrent.{Future, Promise}
+import de.htwg.controller.GameController
+import de.htwg.model.GameSession
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, Promise}
 
 /**
  * Input handler that listens to multiple handlers at once.
  * The first one that produces input "wins" the turn.
  */
 class MultiInputHandler(handlers: InputHandler*) extends InputHandler {
+  private var gameSession: GameSession = _
+
+  override def attachSession(session: GameSession): Unit = {
+    gameSession = session
+    handlers.foreach(_.attachSession(session))
+  }
+  
   override def requestInput(): Future[String] = {
     val promise = Promise[String]()
-    val turnAtRequest = GameController.getCurrentTurn
+    val turnAtRequest = gameSession.turnCount
 
     handlers.foreach { handler =>
       handler.requestInput().foreach { input =>
         // Only fulfill if we are still on the same turn
         // AND the input isn't just a leftover empty string
-        if (GameController.getCurrentTurn == turnAtRequest && input.nonEmpty) {
+        if (gameSession.turnCount == turnAtRequest && input.nonEmpty) {
           promise.trySuccess(input)
         }
       }

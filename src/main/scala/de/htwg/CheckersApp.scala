@@ -1,6 +1,7 @@
 package de.htwg
 
-import de.htwg.controller.{GameController, GuiInputHandler, MultiInputHandler, TuiInputHandler}
+import de.htwg.controller.inputhandler.{GuiInputHandler, MultiInputHandler, TuiInputHandler}
+import de.htwg.controller.{GameController, IController}
 import de.htwg.view.gui.GuiView
 import de.htwg.view.tui.TuiView
 
@@ -38,16 +39,13 @@ object CheckersApp {
    */
   private def launchGui(): Unit = {
     println("Starting Checkers with GUI (Input & Display)...")
+    
+    val controller: IController = new GameController(GuiInputHandler)
+    controller.add(GuiView)
 
-    // Set up GUI mode: GUI handles input
-    GameController.setInputHandler(GuiInputHandler)
-    GameController.add(GuiView)
-
-    // Start the game asynchronously to prevent freezing the environment
-    // before the EDT is fully running.
     new Thread(() => {
       try {
-        GameController.startGame()
+        controller.startGame()
       } catch {
         case e: Exception =>
           e.printStackTrace()
@@ -61,12 +59,10 @@ object CheckersApp {
   private def launchTui(): Unit = {
     println("Starting Checkers with TUI (Input & Display)...")
 
-    // Set up TUI mode: TUI handles input
-    GameController.setInputHandler(TuiInputHandler)
-    GameController.add(TuiView)
+    val controller: IController = new GameController(new TuiInputHandler)
+    controller.add(TuiView)
 
-    // Start the game synchronously
-    GameController.startGame()
+    controller.startGame()
   }
 
   /**
@@ -76,19 +72,14 @@ object CheckersApp {
   private def launchParallel(): Unit = {
     println("Starting Checkers in Parallel Mode (GUI Input, GUI & TUI Display)...")
 
-    // 1. Set Input Handler: Prioritize GUI as the primary source for interactive input
-    GameController.setInputHandler(
-      new MultiInputHandler(GuiInputHandler, TuiInputHandler)
-    )
+    val controller: IController = new GameController(new MultiInputHandler(GuiInputHandler, new TuiInputHandler))
 
-    GameController.add(GuiView)
-    GameController.add(TuiView)
+    controller.add(GuiView)
+    controller.add(TuiView)
 
-    // 3. Start Game: Must be asynchronous to allow the GUI window to render
-    // and prevent the environment from freezing.
     new Thread(() => {
       try {
-        GameController.startGame()
+        controller.startGame()
       } catch {
         case e: Exception =>
           e.printStackTrace()

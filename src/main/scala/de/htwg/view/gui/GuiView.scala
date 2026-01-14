@@ -1,6 +1,7 @@
 package de.htwg.view.gui
 
-import de.htwg.controller.GuiInputHandler
+import de.htwg.controller.inputhandler.GuiInputHandler
+import de.htwg.controller.*
 import de.htwg.model.*
 import de.htwg.model.Board.*
 import de.htwg.util.Observer
