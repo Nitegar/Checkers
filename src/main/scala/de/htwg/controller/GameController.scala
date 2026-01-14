@@ -1,11 +1,8 @@
 package de.htwg.controller
 
-import de.htwg.controller.inputhandler.{InputHandler, TuiInputHandler}
+import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.*
 import de.htwg.model.Board.*
-import de.htwg.util.Observable
-
-import scala.util.{Failure, Success, Try}
 
 /**
  * GameController acts as the central state manager and event publisher (Subject).

@@ -2,7 +2,7 @@ package de.htwg.controller
 
 import de.htwg.controller.move.{KingMoveStrategy, RegularMoveStrategy}
 import de.htwg.model.Board.*
-import de.htwg.model.{Empty, Input, King, Piece, Regular}
+import de.htwg.model.{Board, *}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}

@@ -1,9 +1,9 @@
 package de.htwg.controller.move
 
 import de.htwg.controller.GameLogic
+import de.htwg.controller.GameLogic.isValidPosition
 import de.htwg.model.Board.Board
 import de.htwg.model.Empty
-import de.htwg.controller.GameLogic.isValidPosition
 
 class KingMoveStrategy(isRed: Boolean) extends MoveStrategy {
 

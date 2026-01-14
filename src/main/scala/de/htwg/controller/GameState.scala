@@ -1,10 +1,10 @@
 package de.htwg.controller
 
+import de.htwg.controller.GameLogic.*
 import de.htwg.controller.command.{CommandHistory, MoveCommand}
-import de.htwg.model.Board.Board
-import de.htwg.model.*
-import GameLogic.*
 import de.htwg.controller.inputhandler.InputHandler
+import de.htwg.model.*
+import de.htwg.model.Board.Board
 
 import scala.concurrent.Await
 import scala.concurrent.duration.*
