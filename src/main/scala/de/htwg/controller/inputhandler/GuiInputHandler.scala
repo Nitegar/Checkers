@@ -4,7 +4,7 @@ import de.htwg.controller.inputhandler.InputHandler
 
 import scala.concurrent.{Future, Promise}
 
-object GuiInputHandler extends InputHandler {
+class GuiInputHandler extends InputHandler {
   private var inputPromise: Option[Promise[String]] = None
 
   override def requestInput(): Future[String] = {
@@ -16,7 +16,7 @@ object GuiInputHandler extends InputHandler {
   /**
    * Called by GUI when user makes a move
    */
-  def submitInput(input: String): Unit = {
+  override def submitInput(input: String): Unit = {
     inputPromise.foreach(_.success(input))
     inputPromise = None
   }

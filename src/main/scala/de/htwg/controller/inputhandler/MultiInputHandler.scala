@@ -1,6 +1,5 @@
 package de.htwg.controller.inputhandler
 
-import de.htwg.controller.GameController
 import de.htwg.model.GameSession
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,6 +15,10 @@ class MultiInputHandler(handlers: InputHandler*) extends InputHandler {
   override def attachSession(session: GameSession): Unit = {
     gameSession = session
     handlers.foreach(_.attachSession(session))
+  }
+
+  override def submitInput(input: String): Unit = {
+    handlers.foreach(_.submitInput(input))
   }
   
   override def requestInput(): Future[String] = {
@@ -33,4 +36,5 @@ class MultiInputHandler(handlers: InputHandler*) extends InputHandler {
     }
     promise.future
   }
+
 }

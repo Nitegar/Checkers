@@ -7,4 +7,5 @@ import scala.concurrent.{Future, Promise}
 trait InputHandler {
   def attachSession(session: GameSession): Unit = ()
   def requestInput(): Future[String]
+  def submitInput(input: String): Unit = ()
 }
