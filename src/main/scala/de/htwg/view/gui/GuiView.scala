@@ -1,6 +1,6 @@
 package de.htwg.view.gui
 
-import de.htwg.controller.inputhandler.GuiInputHandler
+import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.controller.*
 import de.htwg.model.*
 import de.htwg.model.Board.*
@@ -12,7 +12,7 @@ import scala.swing.*
 import scala.swing.MenuBar.NoMenuBar.{listenTo, reactions}
 import scala.swing.event.*
 
-object GuiView extends Observer[GameEvent] {
+class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
 
   // State management
   private var currentBoard: Option[Board] = None
@@ -99,17 +99,17 @@ object GuiView extends Observer[GameEvent] {
       showRulesDialog()
     case ButtonClicked(`undoButton`) =>
       if (awaitingInput) {
-        GuiInputHandler.submitInput("undo")
+        inputHandler.submitInput("undo")
         awaitingInput = false
       }
     case ButtonClicked(`redoButton`) =>
       if (awaitingInput) {
-        GuiInputHandler.submitInput("redo")
+        inputHandler.submitInput("redo")
         awaitingInput = false
       }
     case ButtonClicked(`quitButton`) =>
       if (awaitingInput) {
-        GuiInputHandler.submitInput("quit")
+        inputHandler.submitInput("quit")
         awaitingInput = false
       } else {
         frame.dispose()
@@ -346,7 +346,7 @@ object GuiView extends Observer[GameEvent] {
 
     val input = s"$fromColChar$fromRowNum $toColChar$toRowNum"
 
-    GuiInputHandler.submitInput(input)
+    inputHandler.submitInput(input)
 
     Swing.onEDT {
       awaitingInput = false

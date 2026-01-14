@@ -7,7 +7,7 @@ import de.htwg.model.{Board, *}
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-object GameLogic {
+object  GameLogic {
 
   // Convert column letter (a-h) to index (0-7)
   private def columnToIndex(col: Char): Try[Int] = {

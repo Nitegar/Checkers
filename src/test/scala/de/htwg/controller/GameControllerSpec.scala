@@ -21,7 +21,6 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
     }
   }
 
-
   private def createSimpleBoard(): Board = Board().empty()
     .addPiece(5, 4, Regular(isRed = true)) // Red at e6 (R5, C4)
     .addPiece(2, 3, Regular(isRed = false)) // Black at d3 (R2, C3)

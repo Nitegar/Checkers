@@ -1,6 +1,5 @@
 package de.htwg.controller.inputhandler
 
-import de.htwg.controller.GameController
 import de.htwg.model.GameSession
 
 import scala.concurrent.ExecutionContext.Implicits.global

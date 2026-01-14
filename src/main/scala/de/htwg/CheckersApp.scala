@@ -1,89 +1,56 @@
 package de.htwg
 
-import de.htwg.controller.inputhandler.{GuiInputHandler, MultiInputHandler, TuiInputHandler}
-import de.htwg.controller.{GameController, IController}
+import com.google.inject.Guice
+import de.htwg.controller.IController
 import de.htwg.view.gui.GuiView
 import de.htwg.view.tui.TuiView
+import de.htwg.controller.inputhandler.InputHandler
+import de.htwg.di.CheckersModule
 
 object CheckersApp {
 
   def main(args: Array[String]): Unit = {
-    // Check for specific launch modes
-    args.headOption match {
-      case Some("--parallel") | Some("-p") =>
-        launchParallel()
-      case Some("--gui") | Some("-g") =>
-        launchGui()
-      case Some("--tui") | Some("-t") =>
-        launchTui()
+    val mode = args.headOption match {
+      case Some("--parallel") | Some("-p") => "parallel"
+      case Some("--gui") | Some("-g")      => "gui"
+      case Some("--tui") | Some("-t")      => "tui"
       case _ =>
-        // Interactive choice if no arguments are provided
-        println("Checkers Game")
-        println("Choose interface:")
-        println("1. GUI (Graphical)")
-        println("2. TUI (Text-based)")
-        println("3. Parallel (GUI for input, TUI for logging/display)")
-        print("Enter choice (1, 2, or 3): ")
+        println("Checkers Game\n1. GUI\n2. TUI\n3. Parallel")
         scala.io.StdIn.readLine().trim match {
-          case "1" => launchGui()
-          case "2" => launchTui()
-          case "3" => launchParallel()
-          case _ => println("Invalid choice, defaulting to GUI.")
-            launchGui()
+          case "1" => "gui"
+          case "2" => "tui"
+          case "3" => "parallel"
+          case _   => "gui"
         }
     }
+
+    launch(mode)
   }
 
-  /**
-   * Configures the application for GUI input and display only.
-   */
-  private def launchGui(): Unit = {
-    println("Starting Checkers with GUI (Input & Display)...")
-    
-    val controller: IController = new GameController(GuiInputHandler)
-    controller.add(GuiView)
+  private def launch(mode: String): Unit = {
+    // 1. Initialize Guice
+    val injector = Guice.createInjector(new CheckersModule(mode))
 
-    new Thread(() => {
-      try {
-        controller.startGame()
-      } catch {
-        case e: Exception =>
-          e.printStackTrace()
-      }
-    }).start()
-  }
+    // 2. Get injected instances
+    val controller = injector.getInstance(classOf[IController])
+    val inputHandler = injector.getInstance(classOf[InputHandler])
 
-  /**
-   * Configures the application for TUI input and display only.
-   */
-  private def launchTui(): Unit = {
-    println("Starting Checkers with TUI (Input & Display)...")
+    // 3. Attach Views based on mode
+    mode match {
+      case "gui" =>
+        controller.add(new GuiView(inputHandler))
+      case "tui" =>
+        controller.add(new TuiView)
+      case "parallel" =>
+        controller.add(new GuiView(inputHandler))
+        controller.add(new TuiView)
+    }
 
-    val controller: IController = new GameController(new TuiInputHandler)
-    controller.add(TuiView)
-
-    controller.startGame()
-  }
-
-  /**
-   * Configures the application for parallel mode:
-   * GUI handles input and display. TUI only handles display (logging output).
-   */
-  private def launchParallel(): Unit = {
-    println("Starting Checkers in Parallel Mode (GUI Input, GUI & TUI Display)...")
-
-    val controller: IController = new GameController(new MultiInputHandler(GuiInputHandler, new TuiInputHandler))
-
-    controller.add(GuiView)
-    controller.add(TuiView)
-
-    new Thread(() => {
-      try {
-        controller.startGame()
-      } catch {
-        case e: Exception =>
-          e.printStackTrace()
-      }
-    }).start()
+    // 4. Run Game
+    if (mode == "tui") {
+      controller.startGame()
+    } else {
+      new Thread(() => controller.startGame()).start()
+    }
   }
 }

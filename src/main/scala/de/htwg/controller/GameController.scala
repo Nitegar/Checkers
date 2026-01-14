@@ -1,5 +1,6 @@
 package de.htwg.controller
 
+import com.google.inject.Inject
 import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.*
 import de.htwg.model.Board.*
@@ -8,7 +9,9 @@ import de.htwg.model.Board.*
  * GameController acts as the central state manager and event publisher (Subject).
  * Modified to support both TUI and GUI through InputHandler abstraction.
  */
-class GameController(inputHandler: InputHandler) extends IController {
+class GameController @Inject() (
+                                 inputHandler: InputHandler
+                               ) extends IController {
 
   private val session = GameSession()
 
