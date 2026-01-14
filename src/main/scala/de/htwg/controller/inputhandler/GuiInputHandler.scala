@@ -1,4 +1,6 @@
-package de.htwg.controller
+package de.htwg.controller.inputhandler
+
+import de.htwg.controller.inputhandler.InputHandler
 
 import scala.concurrent.{Future, Promise}
 

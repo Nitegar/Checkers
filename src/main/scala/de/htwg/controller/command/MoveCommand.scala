@@ -1,5 +1,6 @@
-package de.htwg.model.command
+package de.htwg.controller.command
 
+import de.htwg.controller.GameLogic
 import de.htwg.model.Board.*
 import de.htwg.model.*
 

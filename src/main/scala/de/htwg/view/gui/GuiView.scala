@@ -1,6 +1,7 @@
 package de.htwg.view.gui
 
-import de.htwg.controller.GuiInputHandler
+import de.htwg.controller.inputhandler.GuiInputHandler
+import de.htwg.controller.{BoardUpdated, GameEnded, GameEvent, GameLogic, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.model.*
 import de.htwg.model.Board.*
 import de.htwg.util.Observer

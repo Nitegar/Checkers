@@ -1,8 +1,9 @@
 package de.htwg.controller
 
+import de.htwg.controller.command.{CommandHistory, MoveCommand}
+import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.*
 import de.htwg.model.Board.Board
-import de.htwg.model.command.CommandHistory
 import de.htwg.view.tui.TuiView
 import org.scalatest.TryValues.convertTryToSuccessOrFailure
 import org.scalatest.matchers.should.Matchers
@@ -157,7 +158,7 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
 
     "transition to AwaitingInputState and undo on 'undo' input" in {
       // 1. Setup: Make a move and push to history
-      val moveCommand = de.htwg.model.command.MoveCommand(initialBoard, Input(5, 4, 4, 5), true)
+      val moveCommand = MoveCommand(initialBoard, Input(5, 4, 4, 5), true)
       val (movedBoard, success) = moveCommand.execute()
       success should be(true)
       CommandHistory.push(moveCommand)
@@ -182,7 +183,7 @@ class GameControllerSpec extends AnyWordSpec with Matchers {
 
     "transition to AwaitingInputState and redo on 'redo' input" in {
       // 1. Setup: Push and then immediately undo a move to prime the redo stack
-      val moveCommand = de.htwg.model.command.MoveCommand(initialBoard, Input(5, 4, 4, 5), true)
+      val moveCommand = command.MoveCommand(initialBoard, Input(5, 4, 4, 5), true)
       val (movedBoard, _) = moveCommand.execute()
       CommandHistory.push(moveCommand)
       CommandHistory.undo(movedBoard)

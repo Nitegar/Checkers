@@ -1,8 +1,9 @@
-package de.htwg.model.move
+package de.htwg.controller.move
 
+import de.htwg.controller.GameLogic
 import de.htwg.model.Board.Board
-import de.htwg.model.{Empty, GameLogic}
-import de.htwg.model.GameLogic.isValidPosition
+import de.htwg.model.Empty
+import de.htwg.controller.GameLogic.isValidPosition
 
 
 class RegularMoveStrategy(isRed: Boolean) extends MoveStrategy {

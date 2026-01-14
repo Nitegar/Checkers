@@ -1,4 +1,4 @@
-package de.htwg.model.move
+package de.htwg.controller.move
 
 import de.htwg.model.Board.Board
 

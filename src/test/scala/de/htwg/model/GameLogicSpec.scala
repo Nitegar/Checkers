@@ -1,7 +1,7 @@
 package de.htwg.model
 
 import de.htwg.model.Board.Board
-import de.htwg.model.GameLogic.*
+import de.htwg.controller.GameLogic.*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

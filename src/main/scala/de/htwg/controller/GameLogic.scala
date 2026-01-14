@@ -1,12 +1,72 @@
-package de.htwg.model
+package de.htwg.controller
 
+import de.htwg.controller.move.{KingMoveStrategy, RegularMoveStrategy}
 import de.htwg.model.Board.*
-import de.htwg.model.move.{KingMoveStrategy, RegularMoveStrategy}
-import de.htwg.model.{Empty, King, Regular}
+import de.htwg.model.{Empty, Input, King, Piece, Regular}
 
 import scala.annotation.tailrec
+import scala.util.{Failure, Success, Try}
 
 object GameLogic {
+
+  // Convert column letter (a-h) to index (0-7)
+  private def columnToIndex(col: Char): Try[Int] = {
+    val lowerCol = col.toLower
+    val index = lowerCol - 'a'
+
+    if (index >= 0 && index < 8) {
+      Success(index)
+    } else {
+      Failure(new IllegalArgumentException(s"Invalid column character: '$col'. Expected 'a'-'h'."))
+    }
+  }
+
+  private def rowToIndex(row: Int): Try[Int] = {
+    val index = row - 1
+
+    if (index >= 0 && index < 8) {
+      Success(index)
+    } else {
+      Failure(new IllegalArgumentException(s"Invalid row number: $row. Expected 1-8."))
+    }
+  }
+
+  private def parseRowString(rowStr: String, pos: String): Try[Int] = {
+    Try(rowStr.toInt).recoverWith {
+      case _: NumberFormatException =>
+        Failure(new IllegalArgumentException(s"Invalid $pos row input: '$rowStr'. Expected a digit (1-8)."))
+    }
+  }
+
+  def parseInput(input: String): Try[Input] = {
+    val parts = input.trim.toLowerCase.split("\\s+")
+    if (parts.length != 2) {
+      return Failure(new IllegalArgumentException("Invalid format. Expected format: 'A1 B2' (source destination)."))
+    }
+
+    val srcStr = parts(0)
+    val destStr = parts(1)
+
+    if (srcStr.length < 2 || destStr.length < 2) {
+      return Failure(new IllegalArgumentException("Coordinates must contain a column and a row (e.g., A1)."))
+    }
+
+    for {
+      srcColChar <- Try(srcStr.charAt(0))
+      srcColIdx <- columnToIndex(srcColChar)
+      srcRowStr = srcStr.substring(1)
+      srcRowInt <- parseRowString(srcRowStr, "source")
+      srcRowIdx <- rowToIndex(srcRowInt)
+
+      destColChar <- Try(destStr.charAt(0))
+      destColIdx <- columnToIndex(destColChar)
+      destRowStr = destStr.substring(1)
+      destRowInt <- parseRowString(destRowStr, "destination")
+      destRowIdx <- rowToIndex(destRowInt)
+
+    } yield Input(srcRowIdx, srcColIdx, destRowIdx, destColIdx)
+  }
+
 
   def makeMove(board: Board, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int): (Board, Int) = {
     val piece = board(fromRow)(fromCol)

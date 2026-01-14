@@ -1,8 +1,9 @@
 package de.htwg
 
+import de.htwg.controller.inputhandler.{GuiInputHandler, MultiInputHandler, TuiInputHandler}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
-import de.htwg.controller.{GameController, GuiInputHandler, TuiInputHandler, MultiInputHandler}
+import de.htwg.controller.GameController
 
 class CheckersAppSpec extends AnyWordSpec with Matchers {
 
