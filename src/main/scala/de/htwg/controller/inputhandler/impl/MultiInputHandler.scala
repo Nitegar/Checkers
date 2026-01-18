@@ -21,7 +21,7 @@ class MultiInputHandler(handlers: InputHandler*) extends InputHandler {
   override def submitInput(input: String): Unit = {
     handlers.foreach(_.submitInput(input))
   }
-  
+
   override def requestInput(): Future[String] = {
     val promise = Promise[String]()
     val turnAtRequest = gameSession.turnCount
