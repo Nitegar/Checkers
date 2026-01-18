@@ -1,47 +1,89 @@
 package de.htwg
 
-import de.htwg.controller.inputhandler.{GuiInputHandler, MultiInputHandler, TuiInputHandler}
-import org.scalatest.wordspec.AnyWordSpec
+import com.google.inject.Guice
+import de.htwg.controller.TestController
+import de.htwg.di.TestCheckersModule
 import org.scalatest.matchers.should.Matchers
-import de.htwg.controller.GameController
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, PrintStream}
 
 class CheckersAppSpec extends AnyWordSpec with Matchers {
+  val testCheckersModule = new TestCheckersModule
 
-  "The CheckersApp" when {
+  def withStdIn(input: String)(test: => Unit): Unit = {
+    val in = new ByteArrayInputStream(input.getBytes)
+    Console.withIn(in)(test)
+  }
 
-    "started with --tui or -t" should {
-      "configure the GameController for TUI mode" in {
-        CheckersApp.main(Array("--tui"))
+  def withStdOut(test: => Unit): String = {
+    val out = new ByteArrayOutputStream()
+    Console.withOut(new PrintStream(out))(test)
+    out.toString
+  }
 
-        GameController.getInputHandler should be (TuiInputHandler)
+  "CheckersApp.main" should {
+
+    "start GUI mode via argument" in {
+      val testController = new TestController
+      testCheckersModule.controller = testController
+      CheckersApp.injectorFactory = _ =>
+        Guice.createInjector(testCheckersModule)
+
+      CheckersApp.main(Array("--gui"))
+      Thread.sleep(50)
+
+      testController.addedObservers.size shouldBe 1
+    }
+
+    "start TUI mode via argument" in {
+      val testController = new TestController
+      testCheckersModule.controller = testController
+      CheckersApp.injectorFactory = _ =>
+        Guice.createInjector(testCheckersModule)
+
+      CheckersApp.main(Array("--tui"))
+
+      testController.addedObservers.size shouldBe 1
+    }
+
+    "start parallel mode via argument" in {
+      val testController = new TestController
+      testCheckersModule.controller = testController
+      CheckersApp.injectorFactory = _ =>
+        Guice.createInjector(testCheckersModule)
+
+      CheckersApp.main(Array("--parallel"))
+      Thread.sleep(50)
+
+      testController.addedObservers.size shouldBe 2
+    }
+
+    "use menu input when no arguments provided" in {
+      val testController = new TestController
+      testCheckersModule.controller = testController
+      CheckersApp.injectorFactory = _ =>
+        Guice.createInjector(testCheckersModule)
+
+      withStdIn("2\n") {
+        val output = withStdOut {
+          CheckersApp.main(Array.empty)
+        }
+        output should include("Checkers Game")
       }
     }
 
-    "started with --gui or -g" should {
-      "configure the GameController for GUI mode" in {
-        CheckersApp.main(Array("--gui"))
+    "default to GUI on invalid menu input" in {
+      val testController = new TestController
+      testCheckersModule.controller = testController
+      CheckersApp.injectorFactory = _ =>
+        Guice.createInjector(testCheckersModule)
 
-        // Wait briefly for the thread to trigger setInputHandler if necessary
-        // Though in your code, it's set before the thread starts
-        GameController.getInputHandler should be (GuiInputHandler)
+      withStdIn("invalid\n") {
+        CheckersApp.main(Array.empty)
       }
-    }
 
-    "started with --parallel or -p" should {
-      "configure a MultiInputHandler with both TUI and GUI handlers" in {
-        CheckersApp.main(Array("--parallel"))
-
-        val handler = GameController.getInputHandler
-        handler shouldBe a [MultiInputHandler]
-      }
-    }
-
-    "started with invalid arguments" should {
-      "default to GUI mode" in {
-        CheckersApp.main(Array("--unknown"))
-
-        GameController.getInputHandler should be (GuiInputHandler)
-      }
+      testController.addedObservers.size shouldBe 1
     }
   }
 }

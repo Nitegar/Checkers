@@ -1,5 +1,6 @@
-package de.htwg.controller.inputhandler
+package de.htwg.controller.inputhandler.impl
 
+import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.GameSession
 
 import scala.concurrent.ExecutionContext.Implicits.global
