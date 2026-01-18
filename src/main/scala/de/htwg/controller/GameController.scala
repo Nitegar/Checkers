@@ -32,7 +32,9 @@ class GameController @Inject() (
 
       events.foreach(notifyObservers)
 
-      if (nextBoard != session.board) session.incrementTurn()
+      if (nextBoard != session.board) {
+        session.incrementTurn()
+      }
       session.board = nextBoard
       session.isRedTurn = nextTurn
       currentState = nextState

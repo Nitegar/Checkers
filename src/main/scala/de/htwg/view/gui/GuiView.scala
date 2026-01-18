@@ -223,7 +223,7 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
         statusLabel.opaque = true
       }
 
-    case MoveUndone =>
+    case MoveUndone() =>
       Swing.onEDT {
         statusMessage = "⬅️ Move undone"
         statusLabel.text = statusMessage
@@ -231,7 +231,7 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
         statusLabel.opaque = true
       }
 
-    case MoveRedone =>
+    case MoveRedone() =>
       Swing.onEDT {
         statusMessage = "➡️ Move redone"
         statusLabel.text = statusMessage
@@ -239,13 +239,11 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
         statusLabel.opaque = true
       }
 
-    case QuitGame =>
+    case QuitGame() =>
       Swing.onEDT {
         frame.dispose()
         System.exit(0)
       }
-
-    case _ => // Ignore other events
   }
 
   private def updateScoreLabel(board: Board): Unit = {

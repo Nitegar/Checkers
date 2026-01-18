@@ -46,12 +46,12 @@ case object InputHandlingState extends GameState {
 
     input match {
       case "quit" | "q" =>
-        (GameOverState, board, isRedTurn, List(QuitGame))
+        (GameOverState, board, isRedTurn, List(QuitGame()))
 
       case "undo" | "u" =>
         CommandHistory.undo(board) match {
           case Some(previousBoard) =>
-            (AwaitingInputState, previousBoard, !isRedTurn, List(MoveUndone))
+            (AwaitingInputState, previousBoard, !isRedTurn, List(MoveUndone()))
           case None =>
             (AwaitingInputState, board, isRedTurn, List(MoveFailed("Nothing to undo.")))
         }
@@ -59,7 +59,7 @@ case object InputHandlingState extends GameState {
       case "redo" | "r" =>
         CommandHistory.redo(board) match {
           case Some(nextBoard) =>
-            (AwaitingInputState, nextBoard, !isRedTurn, List(MoveRedone))
+            (AwaitingInputState, nextBoard, !isRedTurn, List(MoveRedone()))
           case None =>
             (AwaitingInputState, board, isRedTurn, List(MoveFailed("Nothing to redo.")))
         }

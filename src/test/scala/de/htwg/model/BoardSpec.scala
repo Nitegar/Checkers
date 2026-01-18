@@ -72,7 +72,9 @@ class BoardSpec extends AnyWordSpec with Matchers {
     "configured using addPiece" should {
       // Use the builder to configure and then build the final Board
       val initialBuilder = Board().empty()
-      val newBoard = initialBuilder.addPiece(4, 4, King(isRed = true)).build()
+      val newBoard = initialBuilder
+        .addPiece(5, 13, Regular(isRed = false))
+        .addPiece(4, 4, King(isRed = true)).build()
 
       // We test the builder's state by building a board after the changes
       "reflect the added piece in the built board" in {

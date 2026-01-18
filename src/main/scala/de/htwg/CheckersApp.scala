@@ -30,7 +30,7 @@ object CheckersApp {
 
   private def launch(mode: String): Unit = {
     // 1. Initialize Guice
-    val injector = Guice.createInjector(new CheckersModule(mode))
+    val injector = injectorFactory(mode)
 
     // 2. Get injected instances
     val controller = injector.getInstance(classOf[IController])

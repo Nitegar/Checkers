@@ -13,14 +13,14 @@ class TuiView extends Observer[GameEvent] {
   private def clearScreen(): Unit = print("\u001b[2J\u001b[H")
 
   // Helper to count pieces from the stored board
-  private def getScores: (Int, Int) = currentBoard.map(GameLogic.countPieces).getOrElse((0, 0))
+  private def getScores: (Int, Int) = currentBoard.map(GameLogic.countPieces).getOrElse(0, 0)
 
   override def update(event: GameEvent): Unit = event match {
 
-    case MoveUndone =>
+    case MoveUndone() =>
       println("⬅️ Move successfully undone.")
 
-    case MoveRedone =>
+    case MoveRedone() =>
       println("➡️ Move successfully redone.")
 
     // --- New Start Game Event ---
@@ -37,6 +37,7 @@ class TuiView extends Observer[GameEvent] {
           - Kings move diagonally in any direction
           - You must jump when available
           - Reach the opposite end to become a King
+
         """
       )
 
@@ -54,14 +55,8 @@ class TuiView extends Observer[GameEvent] {
     case RequestInput(isRedTurn) =>
       val (redCount, blackCount) = getScores
 
-      // If scores are 0, 0, it means we are in the initial setup phase signaled by StartGame
-      if (redCount == 0 && blackCount == 0) {
-        print("Press Enter to start...")
-      } else {
-        // Regular turn prompt
-        val player = if (isRedTurn) "RED (○)" else "BLACK (●)"
-        print(s"\n${player}'s turn (Red: ${redCount}, Black: ${blackCount})\nEnter move (e.g., 'b3 c4') or 'quit'/'q': ")
-      }
+      val player = if (isRedTurn) "RED (○)" else "BLACK (●)"
+      print(s"\n${player}'s turn (Red: ${redCount}, Black: ${blackCount})\nEnter move (e.g., 'b3 c4') or 'quit'/'q': ")
 
     case InvalidInput(message) =>
       println(message)
@@ -75,7 +70,7 @@ class TuiView extends Observer[GameEvent] {
         case _ => println(s"❌ Move failed: $abstractReason")
       }
 
-    case QuitGame =>
+    case QuitGame() =>
       println("Thanks for playing!")
 
     case TurnAnnounced(isRedTurn) =>
