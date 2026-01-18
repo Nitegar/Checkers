@@ -10,14 +10,15 @@ import de.htwg.model.Board.*
  * Modified to support both TUI and GUI through InputHandler abstraction.
  */
 class GameController @Inject() (
-                                 inputHandler: InputHandler
+                                 inputHandler: InputHandler,
+                                 initialState: GameState
                                ) extends IController {
 
   private val session = GameSession()
 
   inputHandler.attachSession(session)
   
-  private var currentState: GameState = AwaitingInputState
+  private var currentState: GameState = initialState
 
   override def startGame(): Unit = {
     notifyObservers(StartGame())
@@ -25,8 +26,6 @@ class GameController @Inject() (
 
     val currentBoard: Board = Board().withStandardSetup().build()
     val isRedTurn: Boolean = true
-
-    currentState = AwaitingInputState
 
     while (currentState != GameOverState) {
       val (nextState, nextBoard, nextTurn, events) = currentState.process(session, inputHandler)

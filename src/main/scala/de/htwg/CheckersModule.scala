@@ -1,8 +1,9 @@
-package de.htwg.di
+package de.htwg
 
 import com.google.inject.AbstractModule
-import de.htwg.controller._
-import de.htwg.controller.inputhandler._
+import de.htwg.controller.*
+import de.htwg.controller.inputhandler.*
+import de.htwg.controller.inputhandler.impl.{GuiInputHandler, MultiInputHandler, TuiInputHandler}
 
 class CheckersModule(mode: String) extends AbstractModule {
   override def configure(): Unit = {
@@ -21,6 +22,7 @@ class CheckersModule(mode: String) extends AbstractModule {
     // 2. Bind that specific instance as a Singleton
     // This ensures injector.getInstance and Constructor Injection return the same object
     bind(classOf[InputHandler]).toInstance(handler)
+    bind(classOf[GameState]).toInstance(AwaitingInputState)
 
     // 3. Bind the Controller
     bind(classOf[IController]).to(classOf[GameController])

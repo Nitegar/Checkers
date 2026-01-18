@@ -1,10 +1,12 @@
-package de.htwg.model.file
+package de.htwg.file.controller.impl
 
+import de.htwg.file.controller.FileIO
+import de.htwg.file.model.Book
 import de.htwg.model.Board.Board
 import de.htwg.model.{Empty, King, Piece, Regular}
 
-import scala.xml.{Node, PrettyPrinter}
 import java.io.*
+import scala.xml.{Node, PrettyPrinter}
 
 class FileIOXml extends FileIO {
   val path = "data/book.xml"

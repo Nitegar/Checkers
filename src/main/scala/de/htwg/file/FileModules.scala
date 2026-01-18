@@ -1,7 +1,8 @@
-package de.htwg.di
+package de.htwg.file
 
 import com.google.inject.AbstractModule
-import de.htwg.model.file.{FileIO, FileIOJson, FileIOXml}
+import de.htwg.file.controller.FileIO
+import de.htwg.file.controller.impl.{FileIOJson, FileIOXml}
 
 class JsonModule extends AbstractModule {
   override def configure(): Unit = bind(classOf[FileIO]).to(classOf[FileIOJson])

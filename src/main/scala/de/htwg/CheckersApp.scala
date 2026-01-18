@@ -5,9 +5,10 @@ import de.htwg.controller.IController
 import de.htwg.view.gui.GuiView
 import de.htwg.view.tui.TuiView
 import de.htwg.controller.inputhandler.InputHandler
-import de.htwg.di.CheckersModule
 
 object CheckersApp {
+  var injectorFactory: String => com.google.inject.Injector =
+    mode => Guice.createInjector(new CheckersModule(mode))
 
   def main(args: Array[String]): Unit = {
     val mode = args.headOption match {

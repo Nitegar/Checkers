@@ -10,6 +10,7 @@ import java.io.{ByteArrayOutputStream, PrintStream} // Import the AsciiEffect en
 
 class TuiViewSpec extends AnyWordSpec with Matchers {
 
+  private val tuiView = new TuiView
   // --- Helper to capture printed output (for testing update method side effects) ---
 
   /** Helper to capture printed output by redirecting System.out. */
@@ -34,31 +35,31 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
 
     "showing turn announcements" should {
       "show RedTurn ASCII art for red's turn" in {
-        val output = TuiView.turnAnnouncementString(isRedTurn = true)
+        val output = tuiView.turnAnnouncementString(isRedTurn = true)
         output should include(AsciiEffect.RedTurn.art)
       }
 
       "show BlackTurn ASCII art for black's turn" in {
-        val output = TuiView.turnAnnouncementString(isRedTurn = false)
+        val output = tuiView.turnAnnouncementString(isRedTurn = false)
         output should include(AsciiEffect.BlackTurn.art)
       }
     }
 
     "displaying kill effects" should {
       "show SingleKill ASCII art for 1 kill" in {
-        val output = TuiView.killEffectString(1)
+        val output = tuiView.killEffectString(1)
         output should include(AsciiEffect.SingleKill.art)
       }
       "show DoubleKill ASCII art for 2 kills" in {
-        val output = TuiView.killEffectString(2)
+        val output = tuiView.killEffectString(2)
         output should include(AsciiEffect.DoubleKill.art)
       }
       "show TripleKill ASCII art for 3 kills" in {
-        val output = TuiView.killEffectString(3)
+        val output = tuiView.killEffectString(3)
         output should include(AsciiEffect.TripleKill.art)
       }
       "show UltraKill ASCII art for more than 3 kills" in {
-        val output = TuiView.killEffectString(4)
+        val output = tuiView.killEffectString(4)
         output should include(AsciiEffect.UltraKill.art)
       }
     }
@@ -66,7 +67,7 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
     "printing the board" should {
       "display board with correct structure and all row/column numbers/letters" in {
         val board = Board().withStandardSetup().build()
-        val output = TuiView.boardString(board, isRedTurn = true)
+        val output = tuiView.boardString(board, isRedTurn = true)
 
         for (i <- 0 until 8) {
           val number = i + 1;
@@ -81,7 +82,7 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
           .addPiece(4, 4, King(true))
           .addPiece(3, 3, King(false)).build()
 
-        val redOutput = TuiView.boardString(board, isRedTurn = true)
+        val redOutput = tuiView.boardString(board, isRedTurn = true)
 
         redOutput should (include("◎") and include("◉"))
       }
@@ -89,11 +90,11 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
 
     "showing the winner" should {
       "display RedWins ASCII art when red wins" in {
-        val output = TuiView.winnerString(isRed = true)
+        val output = tuiView.winnerString(isRed = true)
         output should include(AsciiEffect.RedWins.art)
       }
       "display BlackWins ASCII art when black wins" in {
-        val output = TuiView.winnerString(isRed = false)
+        val output = tuiView.winnerString(isRed = false)
         output should include(AsciiEffect.BlackWins.art)
       }
     }
@@ -101,47 +102,47 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
     "receiving GameEvents via update" should {
 
       "handle StartGame event by printing the welcome message" in {
-        val output = captureOutput { TuiView.update(StartGame()) }
+        val output = captureOutput { tuiView.update(StartGame()) }
         output should include("WELCOME TO CHECKERS")
         output should include("Rules:")
       }
 
       "handle QuitGame event by printing goodbye message" in {
-        val output = captureOutput { TuiView.update(QuitGame) }
+        val output = captureOutput { tuiView.update(QuitGame) }
         output should include("Thanks for playing!")
       }
 
       "handle TurnAnnounced event by printing the RedTurn ASCII art" in {
         // Since the controller only sends TurnAnnounced(true) initially, we test that path
-        val output = captureOutput { TuiView.update(TurnAnnounced(true)) }
+        val output = captureOutput { tuiView.update(TurnAnnounced(true)) }
         output should include(AsciiEffect.RedTurn.art)
       }
 
       "handle GameEnded event by displaying the BlackWins ASCII art" in {
-        val output = captureOutput { TuiView.update(GameEnded(false)) }
+        val output = captureOutput { tuiView.update(GameEnded(false)) }
         output should include(AsciiEffect.BlackWins.art)
       }
 
       "handle KillEffect event by displaying the SingleKill ASCII art" in {
-        val output = captureOutput { TuiView.update(KillEffect(1)) }
+        val output = captureOutput { tuiView.update(KillEffect(1)) }
         output should include(AsciiEffect.SingleKill.art)
       }
 
       "handle RequestInput during initial setup (scores 0,0) for red" in {
-        TuiView.update(BoardUpdated(Board().withStandardSetup().build(), true))
+        tuiView.update(BoardUpdated(Board().withStandardSetup().build(), true))
 
         // Test the main game prompt (since BoardUpdated is usually called first in the loop)
-        val output = captureOutput { TuiView.update(RequestInput(isRedTurn = true)) }
+        val output = captureOutput { tuiView.update(RequestInput(isRedTurn = true)) }
         output should include("RED (○)'s turn")
         output should include("Enter move")
       }
 
       "handle RequestInput during initial setup (scores 0,0) for black" in {
-        TuiView.update(BoardUpdated(Board().withStandardSetup().build(), true))
+        tuiView.update(BoardUpdated(Board().withStandardSetup().build(), true))
 
         // Test the main game prompt (since BoardUpdated is usually called first in the loop)
         val output = captureOutput {
-          TuiView.update(RequestInput(isRedTurn = false))
+          tuiView.update(RequestInput(isRedTurn = false))
         }
         output should include("BLACK (●)'s turn")
         output should include("Enter move")
@@ -149,34 +150,34 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
 
       "map InvalidInput('Invalid format.') to a user-friendly error" in {
         val errorMessage = "❌ Invalid input. Use format: colRow colRow"
-        val output = captureOutput { TuiView.update(InvalidInput(errorMessage)) }
+        val output = captureOutput { tuiView.update(InvalidInput(errorMessage)) }
         output should include(errorMessage)
       }
 
       "map MoveFailed('Not your piece.') to a user-friendly error" in {
-        val output = captureOutput { TuiView.update(MoveFailed("Not your piece.")) }
+        val output = captureOutput { tuiView.update(MoveFailed("Not your piece.")) }
         output should include("❌ That piece does not belong to you!")
       }
 
       "map MoveFailed('No piece at position.') to a user-friendly error" in {
         val output = captureOutput {
-          TuiView.update(MoveFailed("No piece at position."))
+          tuiView.update(MoveFailed("No piece at position."))
         }
         output should include("❌ No piece at that position.")
       }
 
       "map MoveFailed('Must make jump.') to a user-friendly error" in {
-        val output = captureOutput { TuiView.update(MoveFailed("Must make jump.")) }
+        val output = captureOutput { tuiView.update(MoveFailed("Must make jump.")) }
         output should include("❌ You must make a jump when available!")
       }
 
       "map MoveFailed('Invalid move.') to a user-friendly error" in {
-        val output = captureOutput { TuiView.update(MoveFailed("Invalid move.")) }
+        val output = captureOutput { tuiView.update(MoveFailed("Invalid move.")) }
         output should include("❌ Invalid move.")
       }
 
       "map unhandled errors gracefully" in {
-        val output = captureOutput { TuiView.update(MoveFailed("Unknown error.")) }
+        val output = captureOutput { tuiView.update(MoveFailed("Unknown error.")) }
         output should include("❌ Move failed: Unknown error.")
       }
     }

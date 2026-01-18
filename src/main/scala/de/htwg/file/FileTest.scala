@@ -1,12 +1,12 @@
-package de.htwg
+package de.htwg.file
 
 import com.google.inject.Guice
-import de.htwg.di.{JsonModule, XmlModule}
-import de.htwg.model.file.{Book, FileIO}
+import de.htwg.file.controller.FileIO
+import de.htwg.file.model.Book
 
-object PersistenceTest extends App {
+object FileTest extends App {
   // --- STEP 1: Choose Module (Swap 'XmlModule' for 'JsonModule' here) ---
-  val injector = Guice.createInjector(new XmlModule())
+  val injector = Guice.createInjector(new JsonModule())
   val fileIo = injector.getInstance(classOf[FileIO])
 
   println(s"Testing with: ${fileIo.getClass.getSimpleName}")

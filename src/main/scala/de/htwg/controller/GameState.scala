@@ -10,7 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.*
 import scala.util.{Failure, Success}
 
-sealed trait GameState {
+trait GameState {
   def process(session: GameSession, inputHandler: InputHandler): (GameState, Board, Boolean, List[GameEvent])
 }
 

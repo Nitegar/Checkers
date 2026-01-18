@@ -139,9 +139,6 @@ object  GameLogic {
       findJumpChain(boardAfterJump, nextRow, nextCol, totalKills + kills)
 
     } else {
-      // Multiple jumps available: The player MUST choose. We must STOP the automatic chain here.
-      // In a TUI, we cannot automatically pick. We return the current state and let the Controller
-      // handle prompting the user to select the next jump.
 
       // However, for pure *automatic* chain (as requested), we can arbitrarily pick one,
       // but the correct Checkers rule is usually forced selection.

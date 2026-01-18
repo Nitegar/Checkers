@@ -1,10 +1,12 @@
-package de.htwg.model.file
+package de.htwg.file.controller.impl
 
+import de.htwg.file.controller.FileIO
+import de.htwg.file.model.Book
 import de.htwg.model.Board.Board
 import de.htwg.model.{King, Piece, Regular}
+import upickle.default.*
 
 import java.io.*
-import upickle.default.*
 
 class FileIOJson extends FileIO {
   val path = "data/book.json"
