@@ -20,16 +20,13 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
   private var registered = false
 
   def run(controller: IController): Unit = {
-    val guiThread = new Thread(() => {
-      CheckersGuiApp.inputHandler = inputHandler
-      CheckersGuiApp.controller = controller
-      CheckersGuiApp.guiInstance = this
-      CheckersGuiApp.main(Array())
-    })
-    guiThread.setDaemon(true)
-    guiThread.start()
+    CheckersGuiApp.inputHandler = inputHandler
+    CheckersGuiApp.controller = controller
+    CheckersGuiApp.guiInstance = this
+    CheckersGuiApp.main(Array())
   }
-  override def update(event: GameEvent): Unit =  {
+
+  override def update(event: GameEvent): Unit = {
     Platform.runLater {
       CheckersGuiApp.updateView(event)
     }
@@ -62,7 +59,7 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
 
       val redScoreCard = new VBox {
         alignment = Pos.Center
-        minWidth = 140;
+        minWidth = 140
         minHeight = 140
         style = "-fx-background-color: linear-gradient(to bottom right, #cc0000, #800000); -fx-background-radius: 20; -fx-border-color: #660000; -fx-border-width: 4; -fx-border-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 5, 5);"
         children = Seq(new Label("RED") {
@@ -72,7 +69,7 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
 
       val blackScoreCard = new VBox {
         alignment = Pos.Center
-        minWidth = 140;
+        minWidth = 140
         minHeight = 140
         style = "-fx-background-color: linear-gradient(to bottom right, #444444, #111111); -fx-background-radius: 20; -fx-border-color: black; -fx-border-width: 4; -fx-border-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 5, 5);"
         children = Seq(new Label("BLACK") {
@@ -94,24 +91,24 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
 
       val bottomControls = new HBox {
         alignment = Pos.Center
-        spacing = 25;
+        spacing = 25
         padding = Insets(15)
         style = "-fx-background-color: #f4f4f4;"
         children = Seq(
           new Button("↩ Undo") {
-            style = "-fx-font-size: 14px;";
+            style = "-fx-font-size: 14px;"
             onAction = _ => inputHandler.submitInput("undo")
           },
           new Button("↪ Redo") {
-            style = "-fx-font-size: 14px;";
+            style = "-fx-font-size: 14px;"
             onAction = _ => inputHandler.submitInput("redo")
           },
           new Button("ℹ Rules") {
-            style = "-fx-font-size: 14px;";
+            style = "-fx-font-size: 14px;"
             onAction = _ => showRulesDialog()
           },
           new Button("❌ Quit") {
-            style = "-fx-font-size: 14px;";
+            style = "-fx-font-size: 14px;"
             onAction = _ => sys.exit(0)
           }
         )
@@ -180,7 +177,7 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
     }
 
     private def updateScore(board: de.htwg.model.Board.Board): Unit = {
-      var rLeft = 0;
+      var rLeft = 0
       var bLeft = 0
       for (row <- board; piece <- row) {
         piece match {
@@ -252,7 +249,7 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
               if (isRed == redTurn) {
                 val moves = GameLogic.getValidMoves(b, row, col)
                 if (if (GameLogic.hasJumpsAvailable(b, redTurn)) moves.exists(_._3) else moves.nonEmpty) {
-                  gc.setStroke(Color.web("#FFFFFF", 0.9));
+                  gc.setStroke(Color.web("#FFFFFF", 0.9))
                   gc.setLineWidth(4)
                   gc.strokeRoundRect(x + 4, y + 4, tileSize - 8, tileSize - 8, 12, 12)
                 }
@@ -271,7 +268,7 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
               gc.fillOval(x + tileSize * 0.15, y + tileSize * 0.15, tileSize * 0.7, tileSize * 0.7)
 
               // Piece Ridge (Ring)
-              gc.setStroke(baseColor.darker);
+              gc.setStroke(baseColor.darker)
               gc.setLineWidth(1.5)
               gc.strokeOval(x + tileSize * 0.25, y + tileSize * 0.25, tileSize * 0.5, tileSize * 0.5)
 
@@ -379,7 +376,7 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
             style = "-fx-text-fill: linear-gradient(to bottom, #FFFFFF, #FFD700); -fx-font-size: 32px; -fx-font-weight: bold; -fx-font-family: 'Georgia';"
           },
           new Label(s"$winner") {
-            val textColor = if (winner.toUpperCase == "RED") "#FF3333" else "#CCCCCC"
+            val textColor: String = if (winner.toUpperCase == "RED") "#FF3333" else "#CCCCCC"
             style = s"-fx-text-fill: $textColor; -fx-font-size: 68px; -fx-font-weight: bold; -fx-font-family: 'Verdana'; -fx-effect: dropshadow(one-pass-box, black, 5, 5, 0, 0);"
           },
           new Label("HAS CONQUERED THE BOARD") {
@@ -442,23 +439,24 @@ class GuiViewFx(inputHandler: InputHandler) extends Observer[GameEvent] {
         toValue = 1.0
       }
       val scaleUp = new scalafx.animation.ScaleTransition(scalafx.util.Duration(600), overlay) {
-        toX = 1.0; toY = 1.0
+        toX = 1.0
+        toY = 1.0
       }
       new scalafx.animation.ParallelTransition(Seq(fadeIn, scaleUp)).play()
     }
 
     private def showRulesDialog(): Unit = {
       val alert = new Alert(AlertType.Information) {
-        initOwner(stage);
-        title = "Checkers Rules";
+        initOwner(stage)
+        title = "Checkers Rules"
         headerText = "Game Rules"
       }
       val content = new Label {
         text = "1. Movement: Diagonally forward.\n2. Kings: Move diagonally forward/backward.\n3. Jumps: Forced if available.\n4. Winning: Capture all opponent pieces."
         style = "-fx-font-size: 14px; -fx-padding: 10;"
       }
-      alert.getDialogPane.setContent(content);
-      alert.getDialogPane.setPrefWidth(500);
+      alert.getDialogPane.setContent(content)
+      alert.getDialogPane.setPrefWidth(500)
       alert.showAndWait()
     }
   }
