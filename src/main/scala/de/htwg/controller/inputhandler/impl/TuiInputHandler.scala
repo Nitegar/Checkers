@@ -11,7 +11,7 @@ class TuiInputHandler extends InputHandler {
 
     override def attachSession(session: GameSession): Unit =
         gameSession = session
-    
+
     override def requestInput(): Future[String] = Future {
         val turnAtStart = gameSession.turnCount
         val inputBuilder = new StringBuilder()

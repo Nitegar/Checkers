@@ -28,14 +28,14 @@ class MultiInputHandler(handlers: InputHandler*) extends InputHandler {
 
     handlers.foreach { handler =>
       handler.requestInput().foreach { input =>
-        // Only fulfill if we are still on the same turn
-        // AND the input isn't just a leftover empty string
-        if (gameSession.turnCount == turnAtRequest && input.nonEmpty) {
-          promise.trySuccess(input)
+        val trimmedInput = input.trim
+
+        if (gameSession.turnCount == turnAtRequest) {
+          if (trimmedInput.nonEmpty)
+            promise.trySuccess(input)
         }
       }
     }
     promise.future
   }
-
 }

@@ -21,7 +21,7 @@ case object AwaitingInputState extends GameState {
 
     val (red, black) = countPieces(board)
     if (red == 0 || black == 0) {
-      return (GameOverState, board, isRedTurn, List(GameEnded(winnerIsRed = black == 0)))
+      return (InputHandlingState, board, isRedTurn, List(GameEnded(winnerIsRed = black == 0)))
     }
 
     val events = List(
@@ -45,6 +45,12 @@ case object InputHandlingState extends GameState {
     val input = Await.result(inputFuture, Duration.Inf).trim.toLowerCase
 
     input match {
+      // NEW: Handle restart/revanche here!
+      case "start" | "revanche" =>
+        CommandHistory.clear()
+        val freshBoard = Board().withStandardSetup().build()
+          // Reset everything and go back to the very beginning
+        (AwaitingInputState, freshBoard, true, List(BoardUpdated(freshBoard, true), TurnAnnounced(true)))
       case "quit" | "q" =>
         (GameOverState, board, isRedTurn, List(QuitGame))
 

@@ -16,11 +16,11 @@ class GameController @Inject() (
 
   private val session = GameSession()
   inputHandler.attachSession(session)
-  
+
   private var currentState: GameState = initialState
   override def getBoard: Board = session.board
   override def isRedTurn: Boolean = session.isRedTurn
-  
+
   override def startGame(): Unit = {
     notifyObservers(StartGame())
     notifyObservers(RequestInput(isRedTurn = true))
