@@ -1,6 +1,6 @@
 package de.htwg.view.tui
 
-import de.htwg.controller.{BoardUpdated, GameEnded, InvalidInput, KillEffect, MoveFailed, QuitGame, RequestInput, StartGame, TurnAnnounced}
+import de.htwg.controller.{BoardUpdated, GameEnded, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.model.*
 import de.htwg.view.tui.{AsciiEffect, TuiView}
 import org.scalatest.matchers.should.Matchers
@@ -108,7 +108,7 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "handle QuitGame event by printing goodbye message" in {
-        val output = captureOutput { tuiView.update(QuitGame) }
+        val output = captureOutput { tuiView.update(QuitGame()) }
         output should include("Thanks for playing!")
       }
 
@@ -179,6 +179,16 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       "map unhandled errors gracefully" in {
         val output = captureOutput { tuiView.update(MoveFailed("Unknown error.")) }
         output should include("❌ Move failed: Unknown error.")
+      }
+
+      "map MoveUndone to 'Move successfully undone'" in {
+        val output = captureOutput{ tuiView.update(MoveUndone()) }
+        output should include("⬅️ Move successfully undone.")
+      }
+
+      "map MoveRedone to 'Move successfully redone'" in {
+        val output = captureOutput{ tuiView.update(MoveRedone()) }
+        output should include ("➡️ Move successfully redone.")
       }
     }
   }

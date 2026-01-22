@@ -1,20 +1,19 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
-// Changed to the current stable LTS version (3.7.4 does not exist yet)
-ThisBuild / scalaVersion := "3.3.7"
+
+ThisBuild / scalaVersion := "3.7.4"
 
 libraryDependencies ++= Seq(
-  // The missing ScalaFX wrapper
+  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
   "org.scalafx" %% "scalafx" % "21.0.0-R32",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "org.scalatestplus" %% "mockito-4-11" % "3.2.18.0" % Test,
-  "org.mockito" % "mockito-core" % "5.11.0" % Test,
+  "org.mockito" % "mockito-core" % "5.21.0" % Test,
   "net.codingwell" %% "scala-guice" % "7.0.0",
   "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
-  "com.lihaoyi" %% "upickle" % "3.1.3"
+  "com.lihaoyi" %% "upickle" % "4.4.2",
 )
 
-// Simplified JavaFX dependency management
 libraryDependencies ++= {
   val osName = System.getProperty("os.name").toLowerCase
   val osArch = System.getProperty("os.arch").toLowerCase
@@ -42,3 +41,5 @@ javaOptions ++= Seq(
   "--add-modules", "javafx.controls,javafx.graphics",
   "--add-opens", "javafx.graphics/com.sun.glass.ui=ALL-UNNAMED"
 )
+
+coverageExcludedFiles += ".*\\/de\\/htwg\\/view\\/gui\\/.*|.*\\/de\\/htwg\\/file\\/.*|.*\\/de\\/htwg\\/CheckersModule"

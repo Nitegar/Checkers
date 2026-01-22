@@ -7,6 +7,8 @@ import de.htwg.view.gui.GuiViewFx
 import de.htwg.view.tui.TuiView
 
 object CheckersApp {
+  var injectorFactory: String => com.google.inject.Injector =
+    mode => Guice.createInjector(new CheckersModule(mode))
 
   def main(args: Array[String]): Unit = {
     val mode = args.headOption.getOrElse("--parallel")
@@ -15,7 +17,6 @@ object CheckersApp {
     val controller = injector.getInstance(classOf[IController])
     val inputHandler = injector.getInstance(classOf[InputHandler])
 
-    // 1. Start Logic Thread (The Boss)
     val logicThread = new Thread(() => controller.startGame())
     logicThread.setDaemon(true)
     logicThread.start()
@@ -23,7 +24,6 @@ object CheckersApp {
     var tuiThread: Option[Thread] = None
     var guiThread: Option[Thread] = None
 
-    // 2. Start TUI Thread
     if (mode == "--parallel" || mode == "--tui") {
       val tui = new TuiView(inputHandler)
       controller.add(tui)
@@ -32,7 +32,6 @@ object CheckersApp {
       tuiThread = Some(t)
     }
 
-    // 3. Start GUI (This blocks the main thread)
     if (mode == "--parallel" || mode == "--gui") {
       val gui = new GuiViewFx(inputHandler)
       val t = new Thread(() => gui.run(controller), "gui-thread")

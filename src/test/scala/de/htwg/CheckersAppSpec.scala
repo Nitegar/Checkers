@@ -2,7 +2,6 @@ package de.htwg
 
 import com.google.inject.Guice
 import de.htwg.controller.TestController
-import de.htwg.di.TestCheckersModule
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -65,7 +64,21 @@ class CheckersAppSpec extends AnyWordSpec with Matchers {
       CheckersApp.injectorFactory = _ =>
         Guice.createInjector(testCheckersModule)
 
+      withStdIn("1\n") {
+        val output = withStdOut {
+          CheckersApp.main(Array.empty)
+        }
+        testController.addedObservers.size shouldBe 1
+      }
+
       withStdIn("2\n") {
+        val output = withStdOut {
+          CheckersApp.main(Array.empty)
+        }
+        output should include("Checkers Game")
+      }
+
+      withStdIn("3\n") {
         val output = withStdOut {
           CheckersApp.main(Array.empty)
         }

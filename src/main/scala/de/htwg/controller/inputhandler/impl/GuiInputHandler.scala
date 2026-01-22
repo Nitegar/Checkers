@@ -13,9 +13,6 @@ class GuiInputHandler extends InputHandler {
     promise.future
   }
 
-  /**
-   * Called by GUI when user makes a move
-   */
   override def submitInput(input: String): Unit = {
     inputPromise.foreach(_.success(input))
     inputPromise = None
