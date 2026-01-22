@@ -1,13 +1,14 @@
 package de.htwg.controller
 
-import de.htwg.controller.GameLogic.*
+import de.htwg.controller.GameLogic.{countPieces, hasJumpsAvailable}
 import de.htwg.controller.command.{CommandHistory, MoveCommand}
 import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.*
 import de.htwg.model.Board.Board
+//import de.htwg.model.{Board, Empty, GameSession, Input}
 
 import scala.concurrent.Await
-import scala.concurrent.duration.*
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 trait GameState {
@@ -21,7 +22,7 @@ case object AwaitingInputState extends GameState {
 
     val (red, black) = countPieces(board)
     if (red == 0 || black == 0) {
-      return (InputHandlingState, board, isRedTurn, List(GameEnded(winnerIsRed = black == 0)))
+      return (InputHandlingState, board, isRedTurn, List(GameEnded(board, winnerIsRed = black == 0)))
     }
 
     val events = List(

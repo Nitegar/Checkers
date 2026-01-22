@@ -1,16 +1,16 @@
 package de.htwg.view.tui
 
+import de.htwg.controller.inputhandler.impl.TuiInputHandler
 import de.htwg.controller.{BoardUpdated, GameEnded, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.model.*
-import de.htwg.view.tui.{AsciiEffect, TuiView}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.io.{ByteArrayOutputStream, PrintStream} // Import the AsciiEffect enum
+import java.io.{ByteArrayOutputStream, PrintStream}
 
 class TuiViewSpec extends AnyWordSpec with Matchers {
 
-  private val tuiView = new TuiView
+  private val tuiView = new TuiView(new TuiInputHandler())
   // --- Helper to capture printed output (for testing update method side effects) ---
 
   /** Helper to capture printed output by redirecting System.out. */
@@ -119,7 +119,7 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "handle GameEnded event by displaying the BlackWins ASCII art" in {
-        val output = captureOutput { tuiView.update(GameEnded(false)) }
+        val output = captureOutput { tuiView.update(GameEnded(Board().empty().build(), false)) }
         output should include(AsciiEffect.BlackWins.art)
       }
 

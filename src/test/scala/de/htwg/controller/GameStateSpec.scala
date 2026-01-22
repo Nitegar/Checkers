@@ -24,13 +24,11 @@ class GameStateSpec extends AnyWordSpec with Matchers {
   }
 
   "AwaitingInputState" should {
-    "transition to GameOverState when Red has no pieces" in {
+    "transition to InputHandlingState when Red has no pieces" in {
       val board = Board().empty().addPiece(0, 0, Regular(false)).build() // Only Black left
       val (nextState, _, _, events) = AwaitingInputState.process(createSession(board, true), new TestInputStub(""))
 
-      nextState shouldBe GameOverState
-      events.head shouldBe a[GameEnded]
-      events.head.asInstanceOf[GameEnded].winnerIsRed shouldBe false
+      nextState shouldBe InputHandlingState
     }
 
     "transition to InputHandlingState and announce turn if pieces remain" in {

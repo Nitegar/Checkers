@@ -7,7 +7,7 @@ sealed trait GameEvent
 // State Change Events
 case class StartGame() extends GameEvent
 case class BoardUpdated(board: Board, isRedTurn: Boolean) extends GameEvent
-case class GameEnded(winnerIsRed: Boolean) extends GameEvent
+case class GameEnded(board: Board, winnerIsRed: Boolean) extends GameEvent
 
 // Message/Feedback Events
 case class QuitGame() extends GameEvent

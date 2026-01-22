@@ -1,10 +1,10 @@
 package de.htwg.view.tui
 
-import de.htwg.controller.*
-import de.htwg.model.*
-import de.htwg.model.Board.*
+import de.htwg.controller.{BoardUpdated, GameEnded, GameEvent, GameLogic, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.util.Observer
 import de.htwg.controller.inputhandler.InputHandler
+import de.htwg.model.Board.Board
+import de.htwg.model.{Empty, King, Regular}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -14,16 +14,18 @@ class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
   private var currentBoard: Option[Board] = None
 
   private def clearScreen(): Unit = print("\u001b[2J\u001b[H")
+
   private def getScores: (Int, Int) = currentBoard.map(GameLogic.countPieces).getOrElse((0, 0))
 
   override def update(event: GameEvent): Unit = {
     Future {
       event match {
-        case MoveUndone => println("⬅️ Move successfully undone.")
-        case MoveRedone => println("➡️ Move successfully redone.")
+        case MoveUndone() => println("⬅️ Move successfully undone.")
+        case MoveRedone() => println("➡️ Move successfully redone.")
         case StartGame() =>
           clearScreen()
-          println("""
+          println(
+            """
           ==================================================
                         WELCOME TO CHECKERS
           ==================================================
@@ -37,9 +39,11 @@ class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
           currentBoard = Some(board)
           clearScreen()
           println(boardString(board, isRedTurn))
-        case GameEnded(winnerIsRed) =>
+        case GameEnded(board, winnerIsRed) =>
+          clearScreen()
+          println(boardString(board, winnerIsRed))
           println(winnerString(winnerIsRed))
-          println("\nGame Over! Enter 'revanche' to play again or 'quit' to exit: ") //          clearScreen()
+          println("\nGame Over! Enter 'revanche' to play again or 'quit' to exit: ")
         case RequestInput(isRedTurn) =>
           val (redCount, blackCount) = getScores
           if (redCount == 0 && blackCount == 0) {
@@ -57,7 +61,7 @@ class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
             case "Invalid move." => println("❌ Invalid move.")
             case _ => println(s"❌ Move failed: $abstractReason")
           }
-        case QuitGame => println("\nThanks for playing!")
+        case QuitGame() => println("\nThanks for playing!")
           sys.exit(0)
         case TurnAnnounced(isRedTurn) =>
           clearScreen()
@@ -81,52 +85,53 @@ class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
       }
     }
   }
-}
 
-def turnAnnouncementString(isRedTurn: Boolean): String = {
-  val effect = if (isRedTurn) AsciiEffect.RedTurn else AsciiEffect.BlackTurn
-  effect.color + effect.art + AnsiColor.Reset
-}
-
-def killEffectString(kills: Int): String = {
-  val effect = kills match {
-    case 1 => AsciiEffect.SingleKill
-    case 2 => AsciiEffect.DoubleKill
-    case 3 => AsciiEffect.TripleKill
-    case _ => AsciiEffect.UltraKill
+  def turnAnnouncementString(isRedTurn: Boolean): String = {
+    val effect = if (isRedTurn) AsciiEffect.RedTurn else AsciiEffect.BlackTurn
+    effect.color + effect.art + AnsiColor.Reset
   }
-  effect.color + effect.art + AnsiColor.Reset
-}
 
-def winnerString(isRed: Boolean): String = {
-  val effect = if (isRed) AsciiEffect.RedWins else AsciiEffect.BlackWins
-  effect.color + effect.art + AnsiColor.Reset
-}
-
-def boardString(board: Board, isRedTurn: Boolean): String = {
-  val reset = "\u001b[0m"; val red = "\u001b[91m";
-  val black = "\u001b[90m"
-  val columns = ('a' to 'h').map(c => s" $c ").mkString
-  val sb = new StringBuilder
-  sb.append("\n   " + columns + "\n")
-  sb.append("  " + "+--" * 8 + "+" + "\n")
-  for (row <- 0 until 8) {
-    val rowNumber = row + 1
-    sb.append(s"$rowNumber |")
-    for (col <- 0 until 8) {
-      val piece = board(row)(col) match {
-        case Empty => "  "
-        case Regular(true) => s"${red}○${reset} "
-        case Regular(false) => s"${black}●${reset} "
-        case King(true) => s"${red}◎${reset} "
-        case King(false) => s"${black}◉${reset} "
-      }
-      sb.append(piece + "|")
+  def killEffectString(kills: Int): String = {
+    val effect = kills match {
+      case 1 => AsciiEffect.SingleKill
+      case 2 => AsciiEffect.DoubleKill
+      case 3 => AsciiEffect.TripleKill
+      case _ => AsciiEffect.UltraKill
     }
-    sb.append(s" $rowNumber\n")
-    sb.append("  " + "+--" * 8 + "+" + "\n")
+    effect.color + effect.art + AnsiColor.Reset
   }
-  sb.append("   " + columns + "\n\n")
-  sb.append(s"Pieces: ${red}○${reset}/${red}◎${reset} = Red, ${black}●${reset}/${black}◉${reset} = Black\n")
-  sb.toString()
+
+  def winnerString(isRed: Boolean): String = {
+    val effect = if (isRed) AsciiEffect.RedWins else AsciiEffect.BlackWins
+    effect.color + effect.art + AnsiColor.Reset
+  }
+
+  def boardString(board: Board, isRedTurn: Boolean): String = {
+    val reset = "\u001b[0m";
+    val red = "\u001b[91m";
+    val black = "\u001b[90m"
+    val columns = ('a' to 'h').map(c => s" $c ").mkString
+    val sb = new StringBuilder
+    sb.append("\n   " + columns + "\n")
+    sb.append("  " + "+--" * 8 + "+" + "\n")
+    for (row <- 0 until 8) {
+      val rowNumber = row + 1
+      sb.append(s"$rowNumber |")
+      for (col <- 0 until 8) {
+        val piece = board(row)(col) match {
+          case Empty => "  "
+          case Regular(true) => s"${red}○${reset} "
+          case Regular(false) => s"${black}●${reset} "
+          case King(true) => s"${red}◎${reset} "
+          case King(false) => s"${black}◉${reset} "
+        }
+        sb.append(piece + "|")
+      }
+      sb.append(s" $rowNumber\n")
+      sb.append("  " + "+--" * 8 + "+" + "\n")
+    }
+    sb.append("   " + columns + "\n\n")
+    sb.append(s"Pieces: ${red}○${reset}/${red}◎${reset} = Red, ${black}●${reset}/${black}◉${reset} = Black\n")
+    sb.toString()
+  }
 }
