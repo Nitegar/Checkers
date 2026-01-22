@@ -3,7 +3,7 @@ package de.htwg
 import com.google.inject.Guice
 import de.htwg.controller.IController
 import de.htwg.controller.inputhandler.InputHandler
-import de.htwg.view.gui.GuiViewFx
+import de.htwg.view.gui.GuiView
 import de.htwg.view.tui.TuiView
 
 object CheckersApp {
@@ -33,7 +33,7 @@ object CheckersApp {
     }
 
     if (mode == "--parallel" || mode == "--gui") {
-      val gui = new GuiViewFx(inputHandler)
+      val gui = new GuiView(inputHandler)
       val t = new Thread(() => gui.run(controller), "gui-thread")
       t.start()
       guiThread = Some(t)
