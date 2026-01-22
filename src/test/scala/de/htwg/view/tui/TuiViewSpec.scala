@@ -108,8 +108,19 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "handle QuitGame event by printing goodbye message" in {
-        val output = captureOutput { tuiView.update(QuitGame()) }
+        var exited = false
+
+        val tuiView = new TuiView(
+          new TuiInputHandler,
+          exit = () => exited = true
+        )
+
+        val output = captureOutput {
+          tuiView.update(QuitGame())
+        }
+
         output should include("Thanks for playing!")
+        exited shouldBe true
       }
 
       "handle TurnAnnounced event by printing the RedTurn ASCII art" in {
@@ -187,7 +198,9 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "map MoveRedone to 'Move successfully redone'" in {
-        val output = captureOutput{ tuiView.update(MoveRedone()) }
+        val output = captureOutput{
+          tuiView.update(MoveRedone())
+        }
         output should include ("➡️ Move successfully redone.")
       }
     }

@@ -1,12 +1,10 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-ThisBuild / scalaVersion := "3.7.4"
+ThisBuild / scalaVersion := "3.3.7"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
   "org.scalafx" %% "scalafx" % "21.0.0-R32",
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "org.scalatestplus" %% "mockito-4-11" % "3.2.18.0" % Test,
   "org.mockito" % "mockito-core" % "5.21.0" % Test,
   "net.codingwell" %% "scala-guice" % "7.0.0",
@@ -32,14 +30,18 @@ libraryDependencies ++= {
     .map(m => "org.openjfx" % s"javafx-$m" % "21.0.2" classifier classifier)
 }
 
+javaOptions ++= Seq(
+  "--module-path",
+  (Compile / dependencyClasspath).value.files.filter(_.getName.contains("javafx")).map(_.getAbsolutePath).mkString(java.io.File.pathSeparator),
+  "--add-modules",
+  "javafx.controls,javafx.fxml,javafx.graphics" // Add others if needed
+)
+
 // CRITICAL FOR MAC: This allows JavaFX to hook into the MacOS AppKit thread correctly
 fork := true
-run / connectInput := true
+Test / fork := true
 
-// This helps fix the "Unsupported JavaFX configuration" warning
-javaOptions ++= Seq(
-  "--add-modules", "javafx.controls,javafx.graphics",
-  "--add-opens", "javafx.graphics/com.sun.glass.ui=ALL-UNNAMED"
-)
+coverageEnabled := true
+run / connectInput := true
 
 coverageExcludedFiles += ".*\\/de\\/htwg\\/view\\/gui\\/.*|.*\\/de\\/htwg\\/file\\/.*|.*\\/de\\/htwg\\/CheckersModule"

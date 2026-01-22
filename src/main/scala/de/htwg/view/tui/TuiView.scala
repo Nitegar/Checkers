@@ -6,10 +6,7 @@ import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.Board.Board
 import de.htwg.model.{Empty, King, Regular}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
+class TuiView(inputHandler: InputHandler, exit: () => Unit = () => sys.exit(0)) extends Observer[GameEvent] {
 
   private var currentBoard: Option[Board] = None
 
@@ -18,7 +15,7 @@ class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
   private def getScores: (Int, Int) = currentBoard.map(GameLogic.countPieces).getOrElse((0, 0))
 
   override def update(event: GameEvent): Unit = {
-    Future {
+     {
       event match {
         case MoveUndone() => println("⬅️ Move successfully undone.")
         case MoveRedone() => println("➡️ Move successfully redone.")
@@ -61,8 +58,9 @@ class TuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
             case "Invalid move." => println("❌ Invalid move.")
             case _ => println(s"❌ Move failed: $abstractReason")
           }
-        case QuitGame() => println("\nThanks for playing!")
-          sys.exit(0)
+        case QuitGame() => 
+          println("\nThanks for playing!")
+          exit()
         case TurnAnnounced(isRedTurn) =>
           clearScreen()
           println(turnAnnouncementString(isRedTurn))

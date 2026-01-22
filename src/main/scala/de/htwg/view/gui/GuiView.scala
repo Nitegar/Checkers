@@ -22,16 +22,17 @@ import de.htwg.model.Board.{Board, BoardBuilder}
 class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
 
 
-  def run(controller: IController): Unit = {
+  def run(): Unit = {
     CheckersGuiApp.inputHandler = inputHandler
-    CheckersGuiApp.controller = controller
     CheckersGuiApp.guiInstance = this
     CheckersGuiApp.main(Array())
   }
 
   override def update(event: GameEvent): Unit = {
-    Platform.runLater {
-      CheckersGuiApp.updateView(event)
+    if (CheckersGuiApp.guiInstance != null && CheckersGuiApp.canvas != null) {
+      Platform.runLater {
+        CheckersGuiApp.updateView(event)
+      }
     }
   }
 
@@ -40,9 +41,8 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
     private var redTurn: Boolean = true
 
     var inputHandler: InputHandler = uninitialized
-    var controller: IController = uninitialized
     var guiInstance: GuiView = uninitialized
-    private var canvas: Canvas = uninitialized
+    var canvas: Canvas = uninitialized
     private var redPointsLabel: Label = uninitialized
     private var blackPointsLabel: Label = uninitialized
     private var turnLabel: Label = uninitialized
@@ -143,7 +143,6 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
         }
       }
 
-      controller.add(guiInstance)
       setupInput()
       updateScore()
       draw()
