@@ -18,6 +18,8 @@ import scalafx.util.Duration
 
 import scala.compiletime.uninitialized
 import de.htwg.model.Board.{Board, BoardBuilder}
+import scalafx.scene.image.{Image, ImageView}
+import scalafx.scene.text.{Font, FontWeight, Text}
 
 class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
 
@@ -45,7 +47,7 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
     var canvas: Canvas = uninitialized
     private var redPointsLabel: Label = uninitialized
     private var blackPointsLabel: Label = uninitialized
-    private var turnLabel: Label = uninitialized
+    private var turnLabel: Text = uninitialized
     private var currentBoard: Option[Board] = Some(BoardBuilder(8).withStandardSetup().build())
     private var selectedSquare: Option[(Int, Int)] = None
 
@@ -62,8 +64,11 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
       blackPointsLabel = new Label("0") {
         style = "-fx-font-size: 44px; -fx-text-fill: white; -fx-font-weight: bold;"
       }
-      turnLabel = new Label("TURN: RED") {
-        style = "-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #990000; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 2, 0, 0, 2);"
+      turnLabel = new Text("TURN: RED") {
+        font = Font.font("Arial", FontWeight.Bold, 25)
+        fill = Color.Red
+        stroke = Color.White
+        strokeWidth = 1
       }
 
       val redScoreCard = new VBox {
@@ -91,44 +96,66 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
         padding = Insets(30)
         spacing = 35
         prefWidth = 240
-        style = "-fx-background-color: rgba(220, 220, 220, 0.7); -fx-border-color: #aaaaaa; -fx-border-width: 0 0 0 2;"
-        children = Seq(new Label("SCOREBOARD") {
-          style = "-fx-font-size: 20px; -fx-font-weight: bold;"
-        }, redScoreCard, blackScoreCard, turnLabel)
+        style = "-fx-background-color: transparent;"
+        children = Seq(
+          new Text("SCOREBOARD") {
+            font = Font.font("Arial", FontWeight.Bold, 30)
+            fill = Color.Black
+            stroke = Color.White
+            strokeWidth = 1
+
+          }, redScoreCard, blackScoreCard, turnLabel)
       }
 
       val bottomControls = new HBox {
         alignment = Pos.Center
         spacing = 25
-        padding = Insets(15)
-        style = "-fx-background-color: #f4f4f4;"
+        padding = Insets(18)
+        style = "-fx-background-color: transparent;"
         children = Seq(
-          new Button("↩ Undo") {
-            style = "-fx-font-size: 14px;"
-            onAction = _ => inputHandler.submitInput("undo")
-          },
-          new Button("↪ Redo") {
-            style = "-fx-font-size: 14px;"
-            onAction = _ => inputHandler.submitInput("redo")
-          },
-          new Button("ℹ Rules") {
-            style = "-fx-font-size: 14px;"
-            onAction = _ => showRulesDialog()
-          },
-          new Button("❌ Quit") {
-            style = "-fx-font-size: 14px;"
-            onAction = _ => sys.exit(0)
-          }
+          iconButton(
+            getClass.getResource("/icons/undo.png").toExternalForm,
+            "UNDO",
+            "linear-gradient(#eeeeee, #cccccc)",
+            () => inputHandler.submitInput("undo")
+          ),
+          iconButton(
+            getClass.getResource("/icons/redo.png").toExternalForm,
+            "REDO",
+            "linear-gradient(#eeeeee, #cccccc)",
+            () => inputHandler.submitInput("redo")
+          ),
+          iconButton(
+            getClass.getResource("/icons/rules.png").toExternalForm,
+            "RULES",
+            "linear-gradient(#bbdefb, #64b5f6)",
+            () => showRulesDialog()
+          ),
+          iconButton(
+            getClass.getResource("/icons/quit.png").toExternalForm,
+            "QUIT",
+            "linear-gradient(#ffcccc, #e57373)",
+            () => sys.exit(0)
+          )
         )
       }
 
       val centerPane = new StackPane {
-        style = "-fx-background-color: #2e7d32;"
+        alignment = Pos.Center
+        padding = Insets(2) // Abstand zum Rand des Fensters
+        style =
+          """
+            -fx-background-color: rgba(46, 125, 50, 50);
+            -fx-background-radius: 5;
+            -fx-border-color: white;
+            -fx-border-width: 3;
+            -fx-border-radius: 3;
+            """
         children = Seq(canvas)
       }
 
-      canvas.width <== centerPane.width
-      canvas.height <== centerPane.height
+      canvas.width <== centerPane.width - 10
+      canvas.height <== centerPane.height - 10
       canvas.width.onChange(draw())
       canvas.height.onChange(draw())
 
@@ -136,6 +163,9 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
         title = "Checkers"
         scene = new Scene(950, 750) {
           root = new BorderPane {
+            style = s"-fx-background-image: url('${getClass.getResource("/icons/wood-sb.jpg").toExternalForm}');" +
+              "-fx-background-size: cover;" +
+              "-fx-background-position: center;"
             center = centerPane
             right = sidePanel
             bottom = bottomControls
@@ -219,7 +249,47 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
       redPointsLabel.text = s"${NUMBER_OF_PIECES - black}"
       blackPointsLabel.text = s"${NUMBER_OF_PIECES - red}"
       turnLabel.text = if (redTurn) "TURN: RED" else "TURN: BLACK"
-      turnLabel.style = s"-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: ${if (redTurn) "#990000" else "#323232"};"
+      turnLabel.fill = if (redTurn) Color.Red else Color.Black
+
+    }
+
+    private def iconButton(
+                            imageUrl: String,
+                            text: String,
+                            bgGradient: String,
+                            action: () => Unit
+                          ): Button = {
+
+      val imageNode = new ImageView {
+        image = new Image(imageUrl)
+        fitWidth = 42 // Breite des Icons
+        fitHeight = 42 // Höhe des Icons
+        preserveRatio = true
+      }
+
+      val textLabel = new Label(text) {
+        style = "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #333333;"
+      }
+
+      new Button {
+        graphic = new VBox(6, imageNode, textLabel) {
+          alignment = Pos.Center
+        }
+        minWidth = 90
+        minHeight = 80
+        style =
+          s"""
+          -fx-background-color: rgba(255, 255, 255, 0.7); /* Macht den Button-Körper unsichtbar */
+          -fx-background-insets: 5;
+          -fx-background-radius: 10;
+          -fx-border-color: transparent;     /* Entfernt den Rahmen */
+          -fx-border-width: 1.5;
+          -fx-border-radius: 15;            /* Ecken des Rahmens abrunden */
+          -fx-padding: 5;
+          -fx-cursor: hand;                  /* Behält den Finger-Cursor bei */
+          """
+        onAction = _ => action()
+      }
     }
 
     // Helper to keep your 3D piece logic exactly as it was
@@ -271,7 +341,8 @@ class GuiView(inputHandler: InputHandler) extends Observer[GameEvent] {
     }
 
     private def draw(): Unit = {
-      if (canvas == null || canvas.width.value <= 0) return
+      if (canvas == null || canvas.width.value < 10 || canvas.height.value < 10) return
+
       val gc = canvas.graphicsContext2D
       val size = Math.min(canvas.width.value, canvas.height.value) * 0.9
       val tileSize = size / 8
