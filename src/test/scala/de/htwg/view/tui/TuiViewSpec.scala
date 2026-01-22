@@ -1,16 +1,16 @@
 package de.htwg.view.tui
 
+import de.htwg.controller.inputhandler.impl.TuiInputHandler
 import de.htwg.controller.{BoardUpdated, GameEnded, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.model.*
-import de.htwg.view.tui.{AsciiEffect, TuiView}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.io.{ByteArrayOutputStream, PrintStream} // Import the AsciiEffect enum
+import java.io.{ByteArrayOutputStream, PrintStream}
 
 class TuiViewSpec extends AnyWordSpec with Matchers {
 
-  private val tuiView = new TuiView
+  private val tuiView = new TuiView(new TuiInputHandler())
   // --- Helper to capture printed output (for testing update method side effects) ---
 
   /** Helper to capture printed output by redirecting System.out. */
@@ -108,8 +108,19 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "handle QuitGame event by printing goodbye message" in {
-        val output = captureOutput { tuiView.update(QuitGame()) }
+        var exited = false
+
+        val tuiView = new TuiView(
+          new TuiInputHandler,
+          exit = () => exited = true
+        )
+
+        val output = captureOutput {
+          tuiView.update(QuitGame())
+        }
+
         output should include("Thanks for playing!")
+        exited shouldBe true
       }
 
       "handle TurnAnnounced event by printing the RedTurn ASCII art" in {
@@ -119,7 +130,7 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "handle GameEnded event by displaying the BlackWins ASCII art" in {
-        val output = captureOutput { tuiView.update(GameEnded(false)) }
+        val output = captureOutput { tuiView.update(GameEnded(Board().empty().build(), false)) }
         output should include(AsciiEffect.BlackWins.art)
       }
 
@@ -187,7 +198,9 @@ class TuiViewSpec extends AnyWordSpec with Matchers {
       }
 
       "map MoveRedone to 'Move successfully redone'" in {
-        val output = captureOutput{ tuiView.update(MoveRedone()) }
+        val output = captureOutput{
+          tuiView.update(MoveRedone())
+        }
         output should include ("➡️ Move successfully redone.")
       }
     }

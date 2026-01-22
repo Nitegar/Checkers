@@ -10,7 +10,7 @@ object ChangeBoardState extends GameState {
                         inputHandler: InputHandler
                       ): (GameState, Board, Boolean, List[GameEvent]) = {
     val nextBoard = Board().empty().addPiece(1, 1, Regular(isRed = true)).build()
-    (GameOverState, nextBoard, session.isRedTurn, List(GameEnded(winnerIsRed = true)))
+    (GameOverState, nextBoard, session.isRedTurn, List(GameEnded(session.board, winnerIsRed = true)))
   }
 }
 
@@ -19,6 +19,6 @@ object DoNothingState extends GameState {
                         session: GameSession,
                         inputHandler: InputHandler
                       ): (GameState, Board, Boolean, List[GameEvent]) = {
-    (GameOverState, session.board, session.isRedTurn, List(GameEnded(winnerIsRed = true)))
+    (GameOverState, session.board, session.isRedTurn, List(GameEnded(session.board, winnerIsRed = true)))
   }
 }

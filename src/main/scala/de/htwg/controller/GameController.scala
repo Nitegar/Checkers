@@ -15,9 +15,8 @@ class GameController @Inject() (
                                ) extends IController {
 
   private val session = GameSession()
-
   inputHandler.attachSession(session)
-  
+
   private var currentState: GameState = initialState
 
   override def startGame(): Unit = {

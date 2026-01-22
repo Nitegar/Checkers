@@ -2,56 +2,49 @@ package de.htwg
 
 import com.google.inject.Guice
 import de.htwg.controller.IController
+import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.view.gui.GuiView
 import de.htwg.view.tui.TuiView
-import de.htwg.controller.inputhandler.InputHandler
 
 object CheckersApp {
   var injectorFactory: String => com.google.inject.Injector =
     mode => Guice.createInjector(new CheckersModule(mode))
 
+  var blockOnThreads: Boolean = true // 👈 ADD THIS
+
   def main(args: Array[String]): Unit = {
-    val mode = args.headOption match {
-      case Some("--parallel") | Some("-p") => "parallel"
-      case Some("--gui") | Some("-g")      => "gui"
-      case Some("--tui") | Some("-t")      => "tui"
-      case _ =>
-        println("Checkers Game\n1. GUI\n2. TUI\n3. Parallel")
-        scala.io.StdIn.readLine().trim match {
-          case "1" => "gui"
-          case "2" => "tui"
-          case "3" => "parallel"
-          case _   => "gui"
-        }
-    }
-
-    launch(mode)
-  }
-
-  private def launch(mode: String): Unit = {
-    // 1. Initialize Guice
+    val mode = args.headOption.getOrElse("--parallel")
     val injector = injectorFactory(mode)
 
-    // 2. Get injected instances
     val controller = injector.getInstance(classOf[IController])
     val inputHandler = injector.getInstance(classOf[InputHandler])
 
-    // 3. Attach Views based on mode
-    mode match {
-      case "gui" =>
-        controller.add(new GuiView(inputHandler))
-      case "tui" =>
-        controller.add(new TuiView)
-      case "parallel" =>
-        controller.add(new GuiView(inputHandler))
-        controller.add(new TuiView)
+    val logicThread = new Thread(() => controller.startGame())
+    logicThread.setDaemon(true)
+    logicThread.start()
+
+    var tuiThread: Option[Thread] = None
+    var guiThread: Option[Thread] = None
+
+    if (mode == "--parallel" || mode == "--tui") {
+      val tui = new TuiView(inputHandler)
+      controller.add(tui)
+      val t = new Thread(() => tui.run(), "tui-thread")
+      t.start()
+      tuiThread = Some(t)
     }
 
-    // 4. Run Game
-    if (mode == "tui") {
-      controller.startGame()
-    } else {
-      new Thread(() => controller.startGame()).start()
+    if (mode == "--parallel" || mode == "--gui") {
+      val gui = new GuiView(inputHandler)
+      controller.add(gui)
+      val t = new Thread(() => gui.run(), "gui-thread")
+      t.start()
+      guiThread = Some(t)
+    }
+
+    if (blockOnThreads) {
+      tuiThread.foreach(_.join())
+      guiThread.foreach(_.join())
     }
   }
 }

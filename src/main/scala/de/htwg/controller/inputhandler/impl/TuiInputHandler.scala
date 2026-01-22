@@ -3,15 +3,16 @@ package de.htwg.controller.inputhandler.impl
 import de.htwg.controller.inputhandler.InputHandler
 import de.htwg.model.GameSession
 
+import scala.compiletime.uninitialized
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class TuiInputHandler extends InputHandler {
-    private var gameSession: GameSession = _
+    private var gameSession: GameSession = uninitialized
 
     override def attachSession(session: GameSession): Unit =
         gameSession = session
-    
+
     override def requestInput(): Future[String] = Future {
         val turnAtStart = gameSession.turnCount
         val inputBuilder = new StringBuilder()

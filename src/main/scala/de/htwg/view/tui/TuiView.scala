@@ -1,34 +1,28 @@
 package de.htwg.view.tui
 
-import de.htwg.controller.*
-import de.htwg.model.*
-import de.htwg.model.Board.*
+import de.htwg.controller.{BoardUpdated, GameEnded, GameEvent, GameLogic, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
 import de.htwg.util.Observer
+import de.htwg.controller.inputhandler.InputHandler
+import de.htwg.model.Board.Board
+import de.htwg.model.{Empty, King, Regular}
 
-class TuiView extends Observer[GameEvent] {
+class TuiView(inputHandler: InputHandler, exit: () => Unit = () => sys.exit(0)) extends Observer[GameEvent] {
 
-  // Store the last known board state to access piece counts when RequestInput arrives
   private var currentBoard: Option[Board] = None
 
   private def clearScreen(): Unit = print("\u001b[2J\u001b[H")
 
-  // Helper to count pieces from the stored board
-  private def getScores: (Int, Int) = currentBoard.map(GameLogic.countPieces).getOrElse(0, 0)
+  private def getScores: (Int, Int) = currentBoard.map(GameLogic.countPieces).getOrElse((0, 0))
 
-  override def update(event: GameEvent): Unit = event match {
-
-    case MoveUndone() =>
-      println("⬅️ Move successfully undone.")
-
-    case MoveRedone() =>
-      println("➡️ Move successfully redone.")
-
-    // --- New Start Game Event ---
-    case StartGame() =>
-      clearScreen()
-      // Display the welcome and rules message
-      println(
-        """
+  override def update(event: GameEvent): Unit = {
+     {
+      event match {
+        case MoveUndone() => println("⬅️ Move successfully undone.")
+        case MoveRedone() => println("➡️ Move successfully redone.")
+        case StartGame() =>
+          clearScreen()
+          println(
+            """
           ==================================================
                         WELCOME TO CHECKERS
           ==================================================
@@ -37,51 +31,58 @@ class TuiView extends Observer[GameEvent] {
           - Kings move diagonally in any direction
           - You must jump when available
           - Reach the opposite end to become a King
-
-        """
-      )
-
-    // --- State Change Events ---
-    case BoardUpdated(board, isRedTurn) =>
-      currentBoard = Some(board) // Update internal state
-      clearScreen()
-      println(boardString(board, isRedTurn))
-
-    case GameEnded(winnerIsRed) =>
-      clearScreen()
-      println(winnerString(winnerIsRed))
-
-    // --- Input and Prompt Logic ---
-    case RequestInput(isRedTurn) =>
-      val (redCount, blackCount) = getScores
-
-      val player = if (isRedTurn) "RED (○)" else "BLACK (●)"
-      print(s"\n${player}'s turn (Red: ${redCount}, Black: ${blackCount})\nEnter move (e.g., 'b3 c4') or 'quit'/'q': ")
-
-    case InvalidInput(message) =>
-      println(message)
-
-    case MoveFailed(abstractReason) =>
-      abstractReason match {
-        case "Not your piece." => println("❌ That piece does not belong to you!")
-        case "No piece at position." => println("❌ No piece at that position.")
-        case "Must make jump." => println("❌ You must make a jump when available!")
-        case "Invalid move." => println("❌ Invalid move.")
-        case _ => println(s"❌ Move failed: $abstractReason")
+        """)
+        case BoardUpdated(board, isRedTurn) =>
+          currentBoard = Some(board)
+          clearScreen()
+          println(boardString(board, isRedTurn))
+        case GameEnded(board, winnerIsRed) =>
+          clearScreen()
+          println(boardString(board, winnerIsRed))
+          println(winnerString(winnerIsRed))
+          println("\nGame Over! Enter 'revanche' to play again or 'quit' to exit: ")
+        case RequestInput(isRedTurn) =>
+          val (redCount, blackCount) = getScores
+          if (redCount == 0 && blackCount == 0) {
+            print("Press Enter to start...")
+          } else {
+            val player = if (isRedTurn) "RED (○)" else "BLACK (●)"
+            print(s"\n${player}'s turn (Red: ${redCount}, Black: ${blackCount})\nEnter move (e.g., 'b3 c4') or 'quit'/'q': ")
+          }
+        case InvalidInput(message) => println(message)
+        case MoveFailed(abstractReason) =>
+          abstractReason match {
+            case "Not your piece." => println("❌ That piece does not belong to you!")
+            case "No piece at position." => println("❌ No piece at that position.")
+            case "Must make jump." => println("❌ You must make a jump when available!")
+            case "Invalid move." => println("❌ Invalid move.")
+            case _ => println(s"❌ Move failed: $abstractReason")
+          }
+        case QuitGame() => 
+          println("\nThanks for playing!")
+          exit()
+        case TurnAnnounced(isRedTurn) =>
+          clearScreen()
+          println(turnAnnouncementString(isRedTurn))
+        case KillEffect(kills) =>
+          clearScreen()
+          println(killEffectString(kills))
       }
-
-    case QuitGame() =>
-      println("Thanks for playing!")
-
-    case TurnAnnounced(isRedTurn) =>
-      clearScreen()
-      println(turnAnnouncementString(isRedTurn))
-
-    case KillEffect(kills) =>
-      clearScreen()
-      println(killEffectString(kills))
+    }
   }
 
+  def run(): Unit = {
+    // Use Iterator to be more idiomatic and less likely to block tight
+    scala.io.Source.stdin.getLines().foreach { input =>
+      val cmd = input.trim.toLowerCase
+      if (cmd == "revanche") {
+        de.htwg.controller.command.CommandHistory.clear()
+        inputHandler.submitInput("revanche")
+      } else if (cmd.nonEmpty) {
+        inputHandler.submitInput(cmd)
+      }
+    }
+  }
 
   def turnAnnouncementString(isRedTurn: Boolean): String = {
     val effect = if (isRedTurn) AsciiEffect.RedTurn else AsciiEffect.BlackTurn
@@ -104,25 +105,18 @@ class TuiView extends Observer[GameEvent] {
   }
 
   def boardString(board: Board, isRedTurn: Boolean): String = {
-    val reset = "\u001b[0m"
-    val red = "\u001b[91m"
+    val reset = "\u001b[0m";
+    val red = "\u001b[91m";
     val black = "\u001b[90m"
-
-    // Don't flip the board for black or red
-    val displayBoard = board
-
     val columns = ('a' to 'h').map(c => s" $c ").mkString
     val sb = new StringBuilder
-
     sb.append("\n   " + columns + "\n")
     sb.append("  " + "+--" * 8 + "+" + "\n")
-
     for (row <- 0 until 8) {
       val rowNumber = row + 1
       sb.append(s"$rowNumber |")
-
       for (col <- 0 until 8) {
-        val piece = displayBoard(row)(col) match {
+        val piece = board(row)(col) match {
           case Empty => "  "
           case Regular(true) => s"${red}○${reset} "
           case Regular(false) => s"${black}●${reset} "
@@ -131,17 +125,11 @@ class TuiView extends Observer[GameEvent] {
         }
         sb.append(piece + "|")
       }
-
       sb.append(s" $rowNumber\n")
       sb.append("  " + "+--" * 8 + "+" + "\n")
     }
-
     sb.append("   " + columns + "\n\n")
-    sb.append(
-      s"Pieces: ${red}○${reset}/${red}◎${reset} = Red, " +
-        s"${black}●${reset}/${black}◉${reset} = Black (Ring = King)\n"
-    )
-
+    sb.append(s"Pieces: ${red}○${reset}/${red}◎${reset} = Red, ${black}●${reset}/${black}◉${reset} = Black\n")
     sb.toString()
   }
 }
