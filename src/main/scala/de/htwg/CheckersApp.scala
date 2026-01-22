@@ -10,9 +10,11 @@ object CheckersApp {
   var injectorFactory: String => com.google.inject.Injector =
     mode => Guice.createInjector(new CheckersModule(mode))
 
+  var blockOnThreads: Boolean = true // 👈 ADD THIS
+
   def main(args: Array[String]): Unit = {
     val mode = args.headOption.getOrElse("--parallel")
-    val injector = Guice.createInjector(new CheckersModule(mode))
+    val injector = injectorFactory(mode)
 
     val controller = injector.getInstance(classOf[IController])
     val inputHandler = injector.getInstance(classOf[InputHandler])
@@ -34,12 +36,15 @@ object CheckersApp {
 
     if (mode == "--parallel" || mode == "--gui") {
       val gui = new GuiView(inputHandler)
-      val t = new Thread(() => gui.run(controller), "gui-thread")
+      controller.add(gui)
+      val t = new Thread(() => gui.run(), "gui-thread")
       t.start()
       guiThread = Some(t)
     }
 
-    tuiThread.foreach(_.join())
-    guiThread.foreach(_.join())
+    if (blockOnThreads) {
+      tuiThread.foreach(_.join())
+      guiThread.foreach(_.join())
+    }
   }
 }
