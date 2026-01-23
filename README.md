@@ -1,79 +1,104 @@
-# 🏁 Checkers — Terminal Based
+# Checkers Game
 
 [![Coverage Status](https://coveralls.io/repos/github/Nitegar/Checkers/badge.svg?branch=github-workflow)](https://coveralls.io/github/Nitegar/Checkers?branch=github-workflow)
 
-A fully playable **Checkers / Draughts game** written in **Scala**, designed to run directly in your terminal.
-Includes a clean SBT build, automated CI, and full code-coverage reporting via Coveralls.
+This is a **Checkers game** implemented in **Scala 3**.  
+The project uses **sbt** for building and **JavaFX** for the GUI. It supports both **TUI (text-based UI)** and **GUI** modes.
 
 ---
 
-## 🛠️ Requirements
+## Usage
 
-* **Java 21** (or Java 17+)
-* **SBT**
-* A terminal 😄
+This is a standard **sbt project**.
+
+### Build & Run
+* **Compile the code:**
+    ```bash
+    sbt compile
+    ```
+* **Run the application:**
+    ```bash
+    sbt run
+    ```
+* **Start a Scala 3 REPL:**
+    ```bash
+    sbt console
+    ```
+
+**Main Class:** `de.htwg.CheckersApp`
 
 ---
 
-## 🚀 Running the Game
+## Docker
+
+The project can be built and run in Docker. GUI support is included using JavaFX.
+
+### Prerequisites
+* **Docker Buildx** installed.
+* **macOS:** XQuartz installed for GUI support.
+* **Linux:** X11 server available.
+
+### Build Docker Image
+From the root of the project:
+```bash
+docker buildx build --platform linux/arm64 -t checkers .
+
+```
+
+> **Note:** On Apple Silicon (M1/M2), use `--platform linux/arm64`. On Intel Mac or Linux x86_64, use `--platform linux/amd64`.
+
+### Run Docker Container
+
+#### Linux
 
 ```bash
-sbt run
+# Allow Docker to access your X server
+xhost +local:docker
+
+# Run container
+docker run -it --rm \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    checkers
+
 ```
 
-This launches the interactive Checkers board inside your terminal.
+#### macOS (Apple Silicon)
+
+1. **Setup XQuartz:**
+* `brew install --cask xquartz`
+* Open XQuartz.
+* Go to **Preferences → Security** and check **"Allow connections from network clients"**.
+
+
+2. **Configure Environment:**
+```bash
+export DISPLAY=$(ipconfig getifaddr en0):0
+xhost + $(ipconfig getifaddr en0)
+
+```
+
+
+3. **Run Container:**
+```bash
+docker run -it --rm -e DISPLAY=$DISPLAY checkers
+
+```
+
+
 
 ---
 
-## 🖼️ Rules
+## Notes
 
-- Regular pieces move diagonally forward
-- Kings move diagonally in any direction
-- You must jump when available
-- Reach the opposite end to become a King
+* **TUI:** The TUI works independently of the GUI, allowing you to play directly in the terminal.
+* **Architecture:** JavaFX requires the container architecture to match your host (ARM64 for Apple Silicon, AMD64 for Intel).
+* **Java 21:** Requires enabling native access for JavaFX via `--enable-native-access=javafx.graphics`. This is pre-configured in the SBT `javaOptions`.
 
-## Turn example
-```sh
-                                                                                                                                                                                                                          
-╦═╗╔═╗╔╦╗  ╔╦╗╦ ╦╦═╗╔╗╔                                                                                                                                                                                                   
-╠╦╝║╣  ║║   ║ ║ ║╠╦╝║║║                                                                                                                                                                                                   
-╩╚═╚═╝═╩╝   ╩ ╚═╝╩╚═╝╚╝                                                                                                                                                                                                   
-                                                                                                                                                                                                                          
-      ○ RED'S TURN! ○                                                                                                                                                                                                     
+---
 
-    a  b  c  d  e  f  g  h 
-  +--+--+--+--+--+--+--+--+
-1 |  |● |  |● |  |● |  |● | 1
-  +--+--+--+--+--+--+--+--+
-2 |● |  |● |  |● |  |● |  | 2
-  +--+--+--+--+--+--+--+--+
-3 |  |● |  |● |  |● |  |● | 3
-  +--+--+--+--+--+--+--+--+
-4 |  |  |  |  |  |  |  |  | 4
-  +--+--+--+--+--+--+--+--+
-5 |  |  |  |  |  |  |  |  | 5
-  +--+--+--+--+--+--+--+--+
-6 |○ |  |○ |  |○ |  |○ |  | 6
-  +--+--+--+--+--+--+--+--+
-7 |  |○ |  |○ |  |○ |  |○ | 7
-  +--+--+--+--+--+--+--+--+
-8 |○ |  |○ |  |○ |  |○ |  | 8
-  +--+--+--+--+--+--+--+--+
-    a  b  c  d  e  f  g  h 
+## License
 
-Pieces: ○/◎ = Red, ●/◉ = Black (Ring = King)
-
-
-RED (○)'s turn (Red: 12, Black: 12)
-Enter move (e.g., 'b3 c4') or 'quit'/'q': 
-```
-
-## 🧑‍💻 Development
-
-To compile:
-
-```bash
-sbt compile
-```
+MIT License
 
 ---
