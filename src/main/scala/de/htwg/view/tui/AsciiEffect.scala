@@ -1,9 +1,9 @@
-package de.htwg.view
+package de.htwg.view.tui
 
 object AnsiColor {
   val Reset = "\u001b[0m"
   val Red = "\u001b[91m"
-  val BrightWhite = "\u001b[97m"
+  val BrightRed = "\u001b[31m"
   val BrightBlack = "\u001b[90m"
   val Yellow = "\u001b[93m"
 }
@@ -22,7 +22,7 @@ enum AsciiEffect(val art: String, val color: String = AnsiColor.Yellow) {
 
       ○ RED'S TURN! ○
 """,
-    AnsiColor.BrightWhite
+    AnsiColor.Red
   )
 
   case BlackTurn extends AsciiEffect(
@@ -91,22 +91,29 @@ enum AsciiEffect(val art: String, val color: String = AnsiColor.Yellow) {
   // ───────────── WIN SCREENS ─────────────
   case RedWins extends AsciiEffect(
     s"""
-╦ ╦╦╔╗╔╔╗╔╔═╗╦═╗██╗
-║║║║║║║║║║║╣ ╠╦╝██║
-╚╩╝╩╝╚╝╝╚╝╚═╝╩╚═╚═╝
 
-      ○ RED WINS! ○
+██╗    ██╗██╗███╗   ██╗███╗   ██╗███████╗██████╗
+██║    ██║██║████╗  ██║████╗  ██║██╔════╝██╔══██╗
+██║ █╗ ██║██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
+██║███╗██║██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
+╚███╔███╔╝██║██║ ╚████║██║ ╚████║███████╗██║  ██║
+ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝
+
+      🥇🥇🥇🥇 R E D   W I N S ! 🥇🥇🥇🥇
 """,
-    AnsiColor.BrightWhite
+    AnsiColor.BrightRed
   )
 
   case BlackWins extends AsciiEffect(
     s"""
-╦ ╦╦╔╗╔╔╗╔╔═╗╦═╗██╗
-║║║║║║║║║║║╣ ╠╦╝██║
-╚╩╝╩╝╚╝╝╚╝╚═╝╩╚═╚═╝
+██╗    ██╗██╗███╗   ██╗███╗   ██╗███████╗██████╗
+██║    ██║██║████╗  ██║████╗  ██║██╔════╝██╔══██╗
+██║ █╗ ██║██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
+██║███╗██║██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
+╚███╔███╔╝██║██║ ╚████║██║ ╚████║███████╗██║  ██║
+ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝
 
-      ● BLACK WINS! ●
+     🥇🥇🥇🥇 B L A C K   W I N S ! 🥇🥇🥇🥇
 """,
     AnsiColor.BrightBlack
   )

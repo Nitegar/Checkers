@@ -1,0 +1,20 @@
+package de.htwg.controller.inputhandler.impl
+
+import de.htwg.controller.inputhandler.InputHandler
+
+import scala.concurrent.{Future, Promise}
+
+class GuiInputHandler extends InputHandler {
+  private var inputPromise: Option[Promise[String]] = None
+
+  override def requestInput(): Future[String] = {
+    val promise = Promise[String]()
+    inputPromise = Some(promise)
+    promise.future
+  }
+
+  override def submitInput(input: String): Unit = {
+    inputPromise.foreach(_.success(input))
+    inputPromise = None
+  }
+}

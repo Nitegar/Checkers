@@ -1,65 +1,79 @@
 package de.htwg
 
-import org.scalatest.wordspec.AnyWordSpec
+import com.google.inject.Guice
+import de.htwg.controller.TestController
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
-import de.htwg.controller.GameController
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, PrintStream}
 
-class CheckersAppSpec extends AnyWordSpec with Matchers {
+class CheckersAppSpec
+  extends AnyWordSpec
+    with Matchers
+    with BeforeAndAfterEach {
 
-  private def captureOutput(input: String = "")(block: => Unit): String = {
-    val outStream = new ByteArrayOutputStream()
-    val inStream = new ByteArrayInputStream(input.getBytes)
-    Console.withOut(new PrintStream(outStream)) {
-      Console.withIn(inStream) {
-        block
-      }
-    }
-    outStream.toString
+  // These are re-created before each test
+  private var testController: TestController = _
+  private var testModule: TestCheckersModule = _
+
+  // ----------------------------
+  // Test lifecycle hooks
+  // ----------------------------
+
+  override def beforeEach(): Unit = {
+    testController = new TestController
+    testModule = new TestCheckersModule
+    testModule.controller = testController
+
+    CheckersApp.injectorFactory = _ =>
+      Guice.createInjector(testModule)
+
+    // IMPORTANT: do not block on threads in tests
+    CheckersApp.blockOnThreads = false
   }
 
-  "CheckersApp" when {
+  override def afterEach(): Unit = {
+    // Restore production defaults to avoid leakage
+    CheckersApp.blockOnThreads = true
+    CheckersApp.injectorFactory =
+      mode => Guice.createInjector(new CheckersModule(mode))
+  }
 
-    "the main method is called" should {
+  // ----------------------------
+  // StdIn / StdOut helpers
+  // ----------------------------
 
-      "start the game and display welcome message" in {
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
-        }
-        output should include("WELCOME TO CHECKERS")
-      }
+  private def withStdIn(input: String)(test: => Unit): Unit = {
+    val in = new ByteArrayInputStream(input.getBytes)
+    Console.withIn(in)(test)
+  }
 
-      "initialize the game controller successfully" in {
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
-        }
-        output should include("Press Enter to start")
-        output should include("RED")
-      }
+  private def withStdOut(test: => Unit): String = {
+    val out = new ByteArrayOutputStream()
+    Console.withOut(new PrintStream(out))(test)
+    out.toString
+  }
+
+  // ----------------------------
+  // Tests
+  // ----------------------------
+
+  "CheckersApp.main" should {
+
+    "start GUI mode via argument" in {
+      CheckersApp.main(Array("--gui"))
+      testController.addedObservers.size shouldBe 1
     }
 
-    "executed with command line arguments" should {
-
-      "ignore arguments and start game normally" in {
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array("arg1", "arg2", "arg3"))
-        }
-        output should include("WELCOME TO CHECKERS")
-      }
+    "start TUI mode via argument" in {
+      CheckersApp.main(Array("--tui"))
+      testController.addedObservers.size shouldBe 1
     }
 
-    "the application starts" should {
-
-      "delegate to GameController.startGame()" in {
-        // This test verifies the integration between CheckersApp and GameController
-        val output = captureOutput("\nq\n") {
-          CheckersApp.main(Array.empty)
-        }
-        // Should show game elements that only GameController.startGame() produces
-        output should include("CHECKERS")
-        output should not be empty
-      }
+    "start parallel mode via argument" in {
+      CheckersApp.main(Array("--parallel"))
+      testController.addedObservers.size shouldBe 2
     }
   }
 }

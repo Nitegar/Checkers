@@ -1,0 +1,208 @@
+package de.htwg.view.tui
+
+import de.htwg.controller.inputhandler.impl.TuiInputHandler
+import de.htwg.controller.{BoardUpdated, GameEnded, InvalidInput, KillEffect, MoveFailed, MoveRedone, MoveUndone, QuitGame, RequestInput, StartGame, TurnAnnounced}
+import de.htwg.model.*
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.io.{ByteArrayOutputStream, PrintStream}
+
+class TuiViewSpec extends AnyWordSpec with Matchers {
+
+  private val tuiView = new TuiView(new TuiInputHandler())
+  // --- Helper to capture printed output (for testing update method side effects) ---
+
+  /** Helper to capture printed output by redirecting System.out. */
+  private def captureOutput(block: => Unit): String = {
+    val outStream = new ByteArrayOutputStream()
+    // Temporarily redirect System.out to our stream
+    Console.withOut(new PrintStream(outStream)) {
+      block
+    }
+    outStream.toString.trim
+  }
+
+  private val testBoard = {
+    val b = Board().withStandardSetup().addPiece(0, 1, Empty).build()
+    b
+  }
+
+
+  "TuiView" when {
+
+    // --- 1. PURE RENDERING TESTS (Testing methods that return strings) ---
+
+    "showing turn announcements" should {
+      "show RedTurn ASCII art for red's turn" in {
+        val output = tuiView.turnAnnouncementString(isRedTurn = true)
+        output should include(AsciiEffect.RedTurn.art)
+      }
+
+      "show BlackTurn ASCII art for black's turn" in {
+        val output = tuiView.turnAnnouncementString(isRedTurn = false)
+        output should include(AsciiEffect.BlackTurn.art)
+      }
+    }
+
+    "displaying kill effects" should {
+      "show SingleKill ASCII art for 1 kill" in {
+        val output = tuiView.killEffectString(1)
+        output should include(AsciiEffect.SingleKill.art)
+      }
+      "show DoubleKill ASCII art for 2 kills" in {
+        val output = tuiView.killEffectString(2)
+        output should include(AsciiEffect.DoubleKill.art)
+      }
+      "show TripleKill ASCII art for 3 kills" in {
+        val output = tuiView.killEffectString(3)
+        output should include(AsciiEffect.TripleKill.art)
+      }
+      "show UltraKill ASCII art for more than 3 kills" in {
+        val output = tuiView.killEffectString(4)
+        output should include(AsciiEffect.UltraKill.art)
+      }
+    }
+
+    "printing the board" should {
+      "display board with correct structure and all row/column numbers/letters" in {
+        val board = Board().withStandardSetup().build()
+        val output = tuiView.boardString(board, isRedTurn = true)
+
+        for (i <- 0 until 8) {
+          val number = i + 1;
+          val letter = ('a' + i).toChar.toString
+          output should include(s"$number |")
+          output should include(s" $letter ")
+        }
+      }
+
+      "show king pieces with correct symbols and flip board for black's turn" in {
+        val board = Board().withStandardSetup()
+          .addPiece(4, 4, King(true))
+          .addPiece(3, 3, King(false)).build()
+
+        val redOutput = tuiView.boardString(board, isRedTurn = true)
+
+        redOutput should (include("◎") and include("◉"))
+      }
+    }
+
+    "showing the winner" should {
+      "display RedWins ASCII art when red wins" in {
+        val output = tuiView.winnerString(isRed = true)
+        output should include(AsciiEffect.RedWins.art)
+      }
+      "display BlackWins ASCII art when black wins" in {
+        val output = tuiView.winnerString(isRed = false)
+        output should include(AsciiEffect.BlackWins.art)
+      }
+    }
+
+    "receiving GameEvents via update" should {
+
+      "handle StartGame event by printing the welcome message" in {
+        val output = captureOutput { tuiView.update(StartGame()) }
+        output should include("WELCOME TO CHECKERS")
+        output should include("Rules:")
+      }
+
+      "handle QuitGame event by printing goodbye message" in {
+        var exited = false
+
+        val tuiView = new TuiView(
+          new TuiInputHandler,
+          exit = () => exited = true
+        )
+
+        val output = captureOutput {
+          tuiView.update(QuitGame())
+        }
+
+        output should include("Thanks for playing!")
+        exited shouldBe true
+      }
+
+      "handle TurnAnnounced event by printing the RedTurn ASCII art" in {
+        // Since the controller only sends TurnAnnounced(true) initially, we test that path
+        val output = captureOutput { tuiView.update(TurnAnnounced(true)) }
+        output should include(AsciiEffect.RedTurn.art)
+      }
+
+      "handle GameEnded event by displaying the BlackWins ASCII art" in {
+        val output = captureOutput { tuiView.update(GameEnded(Board().empty().build(), false)) }
+        output should include(AsciiEffect.BlackWins.art)
+      }
+
+      "handle KillEffect event by displaying the SingleKill ASCII art" in {
+        val output = captureOutput { tuiView.update(KillEffect(1)) }
+        output should include(AsciiEffect.SingleKill.art)
+      }
+
+      "handle RequestInput during initial setup (scores 0,0) for red" in {
+        tuiView.update(BoardUpdated(Board().withStandardSetup().build(), true))
+
+        // Test the main game prompt (since BoardUpdated is usually called first in the loop)
+        val output = captureOutput { tuiView.update(RequestInput(isRedTurn = true)) }
+        output should include("RED (○)'s turn")
+        output should include("Enter move")
+      }
+
+      "handle RequestInput during initial setup (scores 0,0) for black" in {
+        tuiView.update(BoardUpdated(Board().withStandardSetup().build(), true))
+
+        // Test the main game prompt (since BoardUpdated is usually called first in the loop)
+        val output = captureOutput {
+          tuiView.update(RequestInput(isRedTurn = false))
+        }
+        output should include("BLACK (●)'s turn")
+        output should include("Enter move")
+      }
+
+      "map InvalidInput('Invalid format.') to a user-friendly error" in {
+        val errorMessage = "❌ Invalid input. Use format: colRow colRow"
+        val output = captureOutput { tuiView.update(InvalidInput(errorMessage)) }
+        output should include(errorMessage)
+      }
+
+      "map MoveFailed('Not your piece.') to a user-friendly error" in {
+        val output = captureOutput { tuiView.update(MoveFailed("Not your piece.")) }
+        output should include("❌ That piece does not belong to you!")
+      }
+
+      "map MoveFailed('No piece at position.') to a user-friendly error" in {
+        val output = captureOutput {
+          tuiView.update(MoveFailed("No piece at position."))
+        }
+        output should include("❌ No piece at that position.")
+      }
+
+      "map MoveFailed('Must make jump.') to a user-friendly error" in {
+        val output = captureOutput { tuiView.update(MoveFailed("Must make jump.")) }
+        output should include("❌ You must make a jump when available!")
+      }
+
+      "map MoveFailed('Invalid move.') to a user-friendly error" in {
+        val output = captureOutput { tuiView.update(MoveFailed("Invalid move.")) }
+        output should include("❌ Invalid move.")
+      }
+
+      "map unhandled errors gracefully" in {
+        val output = captureOutput { tuiView.update(MoveFailed("Unknown error.")) }
+        output should include("❌ Move failed: Unknown error.")
+      }
+
+      "map MoveUndone to 'Move successfully undone'" in {
+        val output = captureOutput{ tuiView.update(MoveUndone()) }
+        output should include("⬅️ Move successfully undone.")
+      }
+
+      "map MoveRedone to 'Move successfully redone'" in {
+        val output = captureOutput{
+          tuiView.update(MoveRedone())
+        }
+        output should include ("➡️ Move successfully redone.")
+      }
+    }
+  }
+}
